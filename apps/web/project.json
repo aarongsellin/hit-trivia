@@ -1,0 +1,40 @@
+{
+  "name": "web",
+  "sourceRoot": "apps/web/src",
+  "projectType": "application",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vue-cli-service serve",
+        "cwd": "apps/web"
+      },
+      "configurations": {
+        "production": {
+          "command": "vue-cli-service serve --mode production"
+        }
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vue-cli-service build",
+        "cwd": "apps/web"
+      },
+      "configurations": {
+        "production": {
+          "command": "vue-cli-service build --mode production"
+        }
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vue-cli-service lint",
+        "cwd": "apps/web"
+      }
+    }
+  },
+  "tags": []
+}

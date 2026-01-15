@@ -2,11 +2,20 @@
   "name": "@org/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "build": "nx run-many --targets=build --all --parallel",
+    "lint": "nx run-many --targets=lint --all --parallel",
+    "test": "nx run-many --targets=test --all --parallel",
+    "db:start": "docker-compose up -d",
+    "db:stop": "docker-compose down",
+    "db:reset": "docker-compose down -v && docker-compose up -d",
+    "dev": "npm run db:start && nx run-many --targets=serve --all --parallel",
+    "dev:cloud": "nx run-many --targets=serve --all --parallel"
+  },
   "private": true,
-  "dependencies": {},
   "devDependencies": {
     "@nx/js": "22.3.3",
+    "@nx/maven": "^22.3.3",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
