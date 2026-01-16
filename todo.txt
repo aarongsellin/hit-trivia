@@ -3,6 +3,5 @@ Aaron kom ihåg!
 - Glöm inte att också inkludera tester.
 
 Att göra:
-- En användare skall kunna logga in med Spotify OAuth genom web men den hanteras i backend.
-- Vi skall visa användarens namn och profilbild i web.
-
+- Skapa en socket i vue. 
+- Den skall gå med i ett rum med detta game id. 

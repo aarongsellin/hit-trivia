@@ -22,9 +22,15 @@ export default {
   },
   methods: {
     async startGame() {
-      const res = await fetch(`${this.apiUrl}/api/new-game`);
-      const { id } = await res.json();
-      this.router.push({ path: `/game`, query: { id } });
+      const { id } = await fetch(`${this.apiUrl}/api/new-game`)
+        .then(async (res) => await res.json())
+        .catch((err) => {
+          console.error('Error starting new game:', err);
+
+          return { id: null };
+        });
+
+      if (id) this.router.push({ path: `/game`, query: { id } });
     },
   },
 };

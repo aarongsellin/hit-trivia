@@ -1,4 +1,8 @@
-/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/HelloController.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/HitTriviaApplication.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/config/EnvConfig.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/config/SecurityConfig.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/config/WebSocketConfig.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/controllers/HTTPController.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/dto/GameCountResponse.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/dto/NewGameResponse.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/handlers/SocketConnectionHandler.java

@@ -1,3 +1,5 @@
 com/hittrivia/app/config/EnvConfig.class
-com/hittrivia/app/HelloController.class
 com/hittrivia/app/HitTriviaApplication.class
+com/hittrivia/app/dto/GameCountResponse.class
+com/hittrivia/app/dto/NewGameResponse.class
+com/hittrivia/app/config/SecurityConfig.class
