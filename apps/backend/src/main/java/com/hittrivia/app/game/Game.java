@@ -9,12 +9,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import com.hittrivia.app.config.GameConfig;
 
+import lombok.Getter;
 import tools.jackson.databind.ObjectMapper;
 
+@Getter
 public class Game {
-    private String roomId;
-    private List<WebSocketSession> players;
-    private WebSocketSession admin;
+    private String gameId;
+    private List<String> players;
+    private String admin; // This class should not store the websocket session, it should store ids.
     private GameState state;
     private GameConfig config;
 
@@ -22,61 +24,36 @@ public class Game {
         WAITING_CONFIG, IN_PROGRESS, FINISHED
     }
 
-    public Game(String roomId, WebSocketSession firstPlayer) {
-        this.roomId = roomId;
+    public Game(String gameId, WebSocketSession firstPlayer) {
+        this.gameId = gameId;
         this.players = new ArrayList<>();
-        this.admin = firstPlayer;
+        this.admin = firstPlayer.getAttributes().get("playerId").toString();
         this.state = GameState.WAITING_CONFIG;
-        this.players.add(firstPlayer);
+        this.players.add(firstPlayer.getAttributes().get("playerId").toString());
+    }
+
+    public void reinstatePlayer(String playerId) {
     }
 
     public void addPlayer(WebSocketSession session) {
-        if (session == null) {
-            throw new IllegalArgumentException("Session cannot be null");
-        }
-
-        if (players.contains(session)) {
-            session.getAttributes().put("error", "Already joined");
-            return;
-        }
-
-        if (admin == null) {
-            setAdmin(session);
-        }
-
-        players.add(session);
     }
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private void setAdmin(WebSocketSession session) {
-        this.admin = session;
-
-        session.getAttributes().put("isAdmin", true);
-
-        Map<String, Object> message = new HashMap<>();
-        message.put("type", "role_assigned");
-        message.put("role", "admin");
-        message.put("roomId", roomId);
-
-        try {
-            String jsonMessage = objectMapper.writeValueAsString(message);
-            session.sendMessage(new TextMessage(jsonMessage));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        
     }
 
-    public boolean isPlayer(WebSocketSession session) {
-        return players.contains(session);
+    public boolean isPlayer(String playerId) {
+        return players.contains(playerId);
     }
 
-    public void removePlayer(WebSocketSession session) {
-        players.remove(session);
+    public void removePlayer(String playerId) {
+        players.remove(playerId);
     }
 
-    public boolean isAdmin(WebSocketSession session) {
-        return admin.equals(session);
+    public boolean isAdmin(String playerId) {
+        return admin.equals(playerId);
     }
 
     public void setConfig(GameConfig config) {
@@ -89,7 +66,7 @@ public class Game {
         return state;
     }
 
-    public List<WebSocketSession> getPlayers() {
+    public List<String> getPlayers() {
         return players;
     }
 

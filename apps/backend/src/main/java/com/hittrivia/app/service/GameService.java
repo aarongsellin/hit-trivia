@@ -9,8 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 @Service
 public class GameService {
-        private final Map<String, Game> games = 
-        Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, Game> games = Collections.synchronizedMap(new HashMap<>());
 
     public Game createGame(String roomId, WebSocketSession admin) {
         Game game = new Game(roomId, admin);

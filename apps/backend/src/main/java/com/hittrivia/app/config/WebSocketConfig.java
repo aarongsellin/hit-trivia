@@ -5,18 +5,18 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
-import com.hittrivia.app.handlers.SocketConnectionHandler;
-// import com.hittrivia.app.handlers.GameWebSocketHandler;
+import com.hittrivia.app.handlers.GameSocketHandler;
+import com.hittrivia.app.handlers.GeneralSocketHandler;
 
-// web socket connections is handled 
-// by this class
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
-    private final SocketConnectionHandler socketConnectionHandler;
+    private final GeneralSocketHandler generalSocketHandler;
+    private final GameSocketHandler gameSocketHandler;
 
-    public WebSocketConfig(SocketConnectionHandler socketConnectionHandler) {
-        this.socketConnectionHandler = socketConnectionHandler;
+    public WebSocketConfig(GeneralSocketHandler generalSocketHandler, GameSocketHandler gameSocketHandler) {
+        this.generalSocketHandler = generalSocketHandler;
+        this.gameSocketHandler = gameSocketHandler;
     }
 
     // Overriding a method which register the socket
@@ -28,7 +28,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
         // the CORS policy for the handlers so that other
         // domains can also access the socket
         webSocketHandlerRegistry
-            .addHandler(socketConnectionHandler,"/ws/game/{room}")
+            .addHandler(gameSocketHandler, "/ws/game/{room}")
+            .setAllowedOrigins("*");
+
+        webSocketHandlerRegistry
+            .addHandler(generalSocketHandler, "/ws/general")
             .setAllowedOrigins("*");
     }
 }
