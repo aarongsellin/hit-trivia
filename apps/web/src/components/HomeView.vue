@@ -20,7 +20,19 @@ export default {
       apiUrl: process.env.VUE_APP_API_URL,
     };
   },
+  mounted() {
+    this.fetchGameCount();
+  },
   methods: {
+    async fetchGameCount() {
+      try {
+        const res = await fetch(`${this.apiUrl}/api/game-count`);
+        const data = await res.json();
+        this.totalGameCount = data.count;
+      } catch (err) {
+        console.error('Error fetching game count:', err);
+      }
+    },
     async startGame() {
       const { id } = await fetch(`${this.apiUrl}/api/new-game`)
         .then(async (res) => await res.json())

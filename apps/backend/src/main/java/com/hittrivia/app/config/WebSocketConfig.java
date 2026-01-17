@@ -11,21 +11,23 @@ import com.hittrivia.app.handlers.SocketConnectionHandler;
 // by this class
 @Configuration
 @EnableWebSocket
-public class WebSocketConfig
-    implements WebSocketConfigurer {
+public class WebSocketConfig implements WebSocketConfigurer {
+    private final SocketConnectionHandler socketConnectionHandler;
+
+    public WebSocketConfig(SocketConnectionHandler socketConnectionHandler) {
+        this.socketConnectionHandler = socketConnectionHandler;
+    }
 
     // Overriding a method which register the socket
     // handlers into a Registry
     @Override
-    public void registerWebSocketHandlers(
-        WebSocketHandlerRegistry webSocketHandlerRegistry)
-    {
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
         // For adding a Handler we give the Handler class we
         // created before with End point Also we are managing
         // the CORS policy for the handlers so that other
         // domains can also access the socket
         webSocketHandlerRegistry
-            .addHandler(new SocketConnectionHandler(),"/ws/game/{room}")
+            .addHandler(socketConnectionHandler,"/ws/game/{room}")
             .setAllowedOrigins("*");
     }
 }

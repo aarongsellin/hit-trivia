@@ -1,5 +1,11 @@
-com/hittrivia/app/config/EnvConfig.class
+com/hittrivia/app/config/GameConfig.class
+com/hittrivia/app/service/GameService.class
 com/hittrivia/app/HitTriviaApplication.class
 com/hittrivia/app/dto/GameCountResponse.class
+com/hittrivia/app/game/Game.class
+com/hittrivia/app/config/WebSocketConfig.class
+com/hittrivia/app/handlers/SocketConnectionHandler.class
+com/hittrivia/app/controllers/HTTPController.class
 com/hittrivia/app/dto/NewGameResponse.class
 com/hittrivia/app/config/SecurityConfig.class
+com/hittrivia/app/game/Game$GameState.class

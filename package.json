@@ -9,7 +9,7 @@
     "db:start": "docker-compose up -d",
     "db:stop": "docker-compose down",
     "db:reset": "docker-compose down -v && docker-compose up -d",
-    "dev": "npm run db:start && nx run-many --targets=serve --all --parallel",
+    "dev": "npm run db:start && source .env && nx run-many --targets=serve --all --parallel",
     "dev:cloud": "nx run-many --targets=serve --all --parallel"
   },
   "private": true,
