@@ -8,3 +8,4 @@
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/game/Game.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/handlers/SocketConnectionHandler.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/service/GameService.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/validators/JsonValidator.java

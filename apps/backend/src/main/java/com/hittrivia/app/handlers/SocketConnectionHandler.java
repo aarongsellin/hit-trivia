@@ -1,5 +1,7 @@
 package com.hittrivia.app.handlers;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -8,8 +10,10 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import com.hittrivia.app.service.GameService;
+import com.nimbusds.jose.shaded.gson.JsonObject;
 import com.hittrivia.app.game.Game;
 
+import com.hittrivia.app.validators.JsonValidator;
 @Service
 public class SocketConnectionHandler extends TextWebSocketHandler {
     // Here we store the connections in-memory.
@@ -44,13 +48,20 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
 
         game.addPlayer(session);
+        // We have to give the user a unique ID they can use later on to get their session state back.
+
+        String userId = UUID.randomUUID().toString();
+
+        JsonObject userIdJsonObject = new JsonObject();
+
+        userIdJsonObject.addProperty("userId", userId);
+
+        session.sendMessage(new TextMessage(userIdJsonObject.toString()));
 
         // Logging the connection ID with Connected Message
         System.out.println(session.getId() + " Connected to game: " + roomId);
     }
 
-    // When client disconnect from WebSocket then this
-    // method is called
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         super.afterConnectionClosed(session, status);
@@ -80,12 +91,14 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             return;
         }
 
+        String payload = message.getPayload().toString();
+
+        if (JsonValidator.validate(payload) == false) {
+            session.sendMessage(new TextMessage("Error: Invalid JSON format"));
+            return;
+        }
+
         
-
-        // Hur hanterar vi anndra meddelanden som inte relaterar till sepelet här?
-
-        // Här måste vi på något sätt hantera meddelanden som relaterar till spelet.
-        // Användaren skall skicka ett meddelande i json.
 
 
 

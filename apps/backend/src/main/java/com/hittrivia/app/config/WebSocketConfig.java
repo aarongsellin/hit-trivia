@@ -6,6 +6,7 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import com.hittrivia.app.handlers.SocketConnectionHandler;
+// import com.hittrivia.app.handlers.GameWebSocketHandler;
 
 // web socket connections is handled 
 // by this class

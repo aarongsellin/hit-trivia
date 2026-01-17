@@ -38,6 +38,10 @@ export default {
 
     const handleMessage = () => {
       if (data.value) {
+        // console.log(JSON.parse(data.value));
+
+        console.log(data);
+
         messages.value.push({
           id: messageCount++,
           text: data.value,
