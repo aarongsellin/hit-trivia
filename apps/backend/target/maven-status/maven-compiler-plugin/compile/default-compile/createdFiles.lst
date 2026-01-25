@@ -1,6 +1,5 @@
 com/hittrivia/app/HitTriviaApplication.class
 com/hittrivia/app/game/Game.class
-com/hittrivia/app/handlers/SocketConnectionHandler.class
 com/hittrivia/app/validators/JsonValidator.class
 com/hittrivia/app/controllers/HTTPController.class
 com/hittrivia/app/config/SecurityConfig.class
