@@ -2,12 +2,14 @@ package com.hittrivia.app.game;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.hittrivia.app.config.GameConfig;
 import com.hittrivia.app.model.Track;
 
@@ -23,29 +25,64 @@ public class Game {
     private Quizz quizz;
     private List<Track> tracks;
 
-    private Phase phase = Phase.WAITING;
+    private Phase phase = Phase.WAITING_CONFIG;
     private int currentRound = 0;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
 
-    public enum Phase {
-        WAITING,
-        PLAYING_MUSIC,
-        GUESSING,
-        REVEAL,
-        FINISHED
-    }
+    private Consumer<String> messageBroadcaster;
+
+    private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public Game(String gameId) {
         this.id = gameId;
         this.players = new ArrayList<>();
-        this.admin = "";
+        this.admin = null;
         this.quizz = new Quizz();
     }
 
+    public void setConfiguration(JsonNode configuration) {
+
+        System.out.println("configuration in game class: " + configuration);
+
+        // Here we find tracks with Apple Web Kit
+        // But for now we are using YouTube so whatever.
+
+        // We can send all the tracks to all the users at once here.
+
+        this.quizz.loadTracks(configuration);
+
+        broadcastMessage(Map.of("type","data", "tits", "hurrr"));
+    }
+
+    public void setMessageBroadcaster(Consumer<String> broadcaster) {
+        this.messageBroadcaster = broadcaster;
+    }
+
+    private void broadcastMessage(Map<String, Object> message) {
+        if (messageBroadcaster != null) {
+            try {
+                messageBroadcaster.accept(OBJECT_MAPPER.writeValueAsString(message));
+            } catch (Exception e) {
+                System.out.println("Failed to broadcast message: " + message);
+            }
+        }
+    }
+
+    public enum Phase {
+        WAITING,
+        WAITING_CONFIG,
+        PLAYING_MUSIC,
+        GUESSING,
+        REVEAL,
+        FINISHED,
+    }
+
+
+
     public void startGame(Consumer<Phase> onPhaseChange) {
-        if (phase != Phase.WAITING) return;
+        // if (phase != Phase.WAITING_CONFIG) return;
         advancePhase(onPhaseChange);
     }
 
@@ -58,6 +95,8 @@ public class Game {
 
     public void advancePhase(Consumer<Phase> onPhaseChange) {
         switch(phase) {
+            case WAITING_CONFIG:
+                break;
             case WAITING:
                 phase = Phase.PLAYING_MUSIC;
                 onPhaseChange.accept(phase);
@@ -112,17 +151,7 @@ public class Game {
     }
 
     public void addPlayer(String playerId) {
-        if (this.players.size() == 0) {
-            this.admin = playerId;
-        }
-
         players.add(playerId);
-    }
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
-    private void setAdmin(String playerId) {
-        
     }
 
     public boolean isPlayer(String playerId) {
@@ -135,6 +164,18 @@ public class Game {
 
     public boolean isAdmin(String playerId) {
         return admin.equals(playerId);
+    }
+
+    public String getAdmin() {
+        return this.admin;
+    }
+
+    public void setAdmin(String playerId) {
+        this.admin = playerId;
+
+        // Move the game to the configuration phase, meaning the user should now be allowed
+        // to display the QR code on the website and that they can now configure the game.
+        
     }
 
     public List<String> getPlayers() {

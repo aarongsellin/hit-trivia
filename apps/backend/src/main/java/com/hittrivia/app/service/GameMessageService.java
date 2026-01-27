@@ -1,23 +1,26 @@
 package com.hittrivia.app.service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hittrivia.app.game.Game;
-
-import lombok.experimental.SuperBuilder;
+import com.nimbusds.jose.Payload;
 
 @Service
 public class GameMessageService {
     private final GameService gameService;
+    private final Map<String, List<WebSocketSession>> gameSessions = new ConcurrentHashMap<>();
 
     public GameMessageService(GameService gameService) {
         this.gameService = gameService;
@@ -28,6 +31,8 @@ public class GameMessageService {
     public static class PayloadType {
         public static final String playerID = "playerId";
         public static final String configuration = "configuration";
+        public static final String phaseChange = "phaseChange";
+        public static final String admin = "admin";
     }
 
     public void handleMessage(WebSocketSession session, JsonNode message, String gameId) {
@@ -63,30 +68,9 @@ public class GameMessageService {
 
             handleMessageField(session, gameId, key, value);
         });
-        
-        // switch (messageType) {
-        //     case "playerId":
-        //         if (message.has("data") == true && message.get("data").has("playerId")) {
-        //             String playerId = message.get("data").get("playerId").asText(null);
-        //             handlePlayerJoin(playerId, session, gameId);
-        //         } else {
-        //             System.out.println("playerId message missing data.playerId field");
-
-        //             try {
-        //                 sendJsonMessage(session, "error", Map.of("message","playerId message missing data.playerId field"));
-        //             } catch (Exception e) {
-        //                 e.printStackTrace();
-        //             }
-        //         }
-        //         break;
-        //     case "configuration":
-
-        //         break;
-        //     default:
-        //         System.out.println("Unknown message type: " + messageType);
-        //         break;
-        // }
     }
+
+    // var hade varit en smart plats att sätta in admin korrekt?
 
     private void handleMessageField(WebSocketSession session, String gameId, String key, JsonNode value) {
         switch (key) {
@@ -107,28 +91,56 @@ public class GameMessageService {
     }
 
     private void handleConfiguration(WebSocketSession session, String gameId, JsonNode value) {
+        // We save the configuration to the game object
+        
 
+        // We start procuring songs!
+
+        Game game = gameService.getGame(gameId);
+
+        // Set up the broadcaster callback so the Game can send messages to all players
+        game.setMessageBroadcaster(jsonMessage -> {
+            List<WebSocketSession> sessions = gameSessions.get(gameId);
+            if (sessions != null) {
+                sessions.removeIf(s -> !s.isOpen());
+
+                for (WebSocketSession clientSession : sessions) {
+                    try {
+                        clientSession.sendMessage(new TextMessage(jsonMessage));
+                        // sendJsonMessage(session, null, gameSessions);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        game.setConfiguration(value);
+
+    game.startGame(newPhase -> {
+        // Phase change logic
+        System.out.println("Game has new phase: " + newPhase);
+    });
     }
 
     private void handleGuess(WebSocketSession session, String gameId, JsonNode value) {
-        
+
     }
 
     private void handlePlayerJoin(String playerId, WebSocketSession session, String gameId) {
-        // Get player id from data
-
-        // Assign the player id back to the game.
         Game game = gameService.getGame(gameId);
 
         if (game.isPlayer(playerId)) {
-            // Reassign the session to the player
+            // Re-assign the session to the player
             System.out.println("Player " + playerId + " rejoined game " + gameId);
-
-            session.getAttributes().put("playerId", playerId);
 
             // Tell the user they have rejoined successfully.
             try {
-                sendJsonMessage(session, MessageType.SUCCESS, Map.of("message", "successfully rejoined"));
+                sendJsonMessage(session, MessageType.DATA, Map.of("gameState", game.getPhase()));
+
+                if (Objects.equals(game.getAdmin(), playerId)) {
+                    sendJsonMessage(session, MessageType.DATA, Map.of(PayloadType.admin, true));
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -145,6 +157,21 @@ public class GameMessageService {
 
         try {
             game.addPlayer(newPlayerId);
+
+            // This here might be a rotten solution.
+            if (Objects.equals(game.getAdmin(), null)) {
+                game.setAdmin(newPlayerId);
+
+                game.startGame(null);
+
+                sendJsonMessage(session, MessageType.DATA, Map.of(PayloadType.admin, true));
+                // Maybe, when we want information from the client we get use a like
+                // "wants": "configuration"
+                // from the server?
+                sendJsonMessage(session, MessageType.DATA, Map.of(PayloadType.configuration, true));
+            } else {
+                sendJsonMessage(session, MessageType.DATA, Map.of(PayloadType.admin, false));
+            }
         } catch (Exception addError) {
             System.out.println("Could not add player to game: " + addError.getMessage());
 
@@ -163,19 +190,22 @@ public class GameMessageService {
             return;
         }
             
-            // Tell the user they have been added successfully!
+        // Tell the user they have been added successfully!
         try {
-            sendJsonMessage(session, MessageType.DATA, Map.of("playerId", newPlayerId));
+            sendJsonMessage(session, MessageType.DATA, Map.of("playerId", newPlayerId, "gameState", game.getPhase()));
         } catch (Exception e) {
             e.printStackTrace();
         }
         
     }
 
-    public void handleConnectionClosed(String playerId, String roomId) {
-        System.out.println("Connection closed for player: " + playerId + " in room: " + roomId);
+    public void handleConnectionClosed(String playerId, String gameId) {
+        System.out.println("Connection closed for player: " + playerId + " in room: " + gameId);
 
-        // gameService.getGame(roomId).freezePlayer(playerId);
+        List<WebSocketSession> sessions = gameSessions.get(gameId);
+        if (sessions != null) {
+            sessions.removeIf(s -> !s.isOpen());
+        }
     }
 
     private String createPlayerId() {
@@ -213,6 +243,7 @@ public class GameMessageService {
 
         msg.put("type", type.getValue());
         msg.putAll(data);
+        msg.put("timestamp", System.currentTimeMillis());
 
         session.sendMessage(new TextMessage(OBJECT_MAPPER.writeValueAsString(msg)));
     }
@@ -229,6 +260,8 @@ public class GameMessageService {
                 e.printStackTrace();
             }
         }
+
+        gameSessions.computeIfAbsent(gameId, k -> new CopyOnWriteArrayList<>()).add(session);
 
         System.out.println("Someone connected to game: " + gameId);
 
