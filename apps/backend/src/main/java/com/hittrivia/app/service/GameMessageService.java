@@ -15,7 +15,6 @@ import org.springframework.web.socket.WebSocketSession;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hittrivia.app.game.Game;
-import com.nimbusds.jose.Payload;
 
 @Service
 public class GameMessageService {

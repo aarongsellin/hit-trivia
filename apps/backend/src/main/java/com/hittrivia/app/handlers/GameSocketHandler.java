@@ -1,5 +1,6 @@
 package com.hittrivia.app.handlers;
 
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.TextMessage;
@@ -12,7 +13,7 @@ import com.hittrivia.app.service.GameMessageService;
 import com.hittrivia.app.validators.JsonValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@Service
+@Component
 public class GameSocketHandler extends TextWebSocketHandler {
     private final GameMessageService gameMessageService;
 

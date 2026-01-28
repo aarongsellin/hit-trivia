@@ -10,7 +10,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.hittrivia.app.config.GameConfig;
 import com.hittrivia.app.model.Track;
 
 import lombok.Getter;
@@ -21,7 +20,6 @@ public class Game {
     private String id;
     private List<String> players;
     private String admin;
-    private GameConfig config;
     private Quizz quizz;
     private List<Track> tracks;
 
@@ -34,6 +32,10 @@ public class Game {
     private Consumer<String> messageBroadcaster;
 
     private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    public Phase getPhase() {
+        return phase;
+    }
 
     public Game(String gameId) {
         this.id = gameId;
