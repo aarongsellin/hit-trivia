@@ -8,6 +8,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@org/source": "file:../..",
     "@vueuse/core": "^14.1.0",
     "core-js": "^3.8.3",
     "qrcode.vue": "^3.6.0",
