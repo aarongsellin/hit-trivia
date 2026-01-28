@@ -42,10 +42,6 @@ public class GameSocketHandler extends TextWebSocketHandler {
         session.sendMessage(new TextMessage(OBJECT_MAPPER.writeValueAsString(msg)));
     }
 
-    private void broadcastToGame(String roomId, String type, Object data) throws Exception {
-        // GameResponse<Object> response = new GameResponse<>(type, data);
-    }
-
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         super.handleTextMessage(session, message);

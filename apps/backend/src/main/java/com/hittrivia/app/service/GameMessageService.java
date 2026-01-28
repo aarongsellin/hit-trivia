@@ -94,7 +94,6 @@ public class GameMessageService {
         
 
         // We start procuring songs!
-
         Game game = gameService.getGame(gameId);
 
         // Set up the broadcaster callback so the Game can send messages to all players
@@ -105,8 +104,8 @@ public class GameMessageService {
 
                 for (WebSocketSession clientSession : sessions) {
                     try {
-                        clientSession.sendMessage(new TextMessage(jsonMessage));
-                        // sendJsonMessage(session, null, gameSessions);
+                        // clientSession.sendMessage(new TextMessage(jsonMessage));
+                        sendJsonMessage(clientSession, MessageType.DATA, jsonMessage);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -237,7 +236,7 @@ public class GameMessageService {
         }
     }
 
-    private void sendJsonMessage(WebSocketSession session, MessageType type, Map data) throws Exception {
+    private void sendJsonMessage(WebSocketSession session, MessageType type, Map<String, Object> data) throws Exception {
         Map<String, Object> msg = new HashMap<>();
 
         msg.put("type", type.getValue());

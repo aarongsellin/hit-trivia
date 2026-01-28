@@ -1,5 +1,13 @@
 <template>
   <div class="game-container">
+    <!-- Progress Bar -->
+    <div v-if="phaseEndTime" class="progress-bar-container">
+      <div
+        class="progress-bar"
+        :style="{ width: progressPercentage + '%' }"
+      ></div>
+    </div>
+
     <div class="header">
       <p>Status: {{ socket.status }}</p>
       <p>
@@ -134,7 +142,14 @@ export default {
       test: this.handlePlayerJoin,
       gameState: null,
       gameId: null,
+      countdown: null,
       gameUrl: '',
+
+      // Progress bar
+      phaseEndTime: null,
+      phaseStartTime: null,
+      progressPercentage: 0,
+      progressInterval: null,
 
       // Configuration options
       genres: ['Pop', 'Rock', 'Hip-Hop', 'Country', 'Electronic', 'Jazz'],
@@ -210,6 +225,44 @@ export default {
 
       this.socket.send(toSend);
     },
+    startPhaseCountdown(newPhase, endTimestamp) {
+      // Clear any existing interval
+      if (this.progressInterval) {
+        clearInterval(this.progressInterval);
+      }
+
+      // Set times
+      this.phaseStartTime = Date.now();
+      this.phaseEndTime = endTimestamp;
+
+      const totalDuration = endTimestamp - this.phaseStartTime;
+
+      // Update progress every 50ms for smooth animation
+      this.progressInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - this.phaseStartTime;
+        const percentage = Math.min((elapsed / totalDuration) * 100, 100);
+
+        this.progressPercentage = percentage;
+
+        // When complete, clear interval and trigger phase change
+        if (percentage >= 100) {
+          clearInterval(this.progressInterval);
+          this.handlePhaseChange(newPhase);
+        }
+      }, 50);
+    },
+    handlePhaseChange(phase) {
+      // Clear progress bar
+      this.phaseEndTime = null;
+      this.progressPercentage = 0;
+      if (this.progressInterval) {
+        clearInterval(this.progressInterval);
+      }
+
+      // Handle the phase transition
+      console.log('Phase changed to:', phase);
+    },
     handleMessage(data) {
       this.messages.push({
         text: data,
@@ -235,11 +288,16 @@ export default {
                 localStorage.setItem('playerId', this.playerId);
                 break;
               case 'admin':
-                console.log('ADMIN CASE TRUE');
                 this.isAdmin = element;
                 break;
               case 'gameState':
                 this.gameState = element;
+                break;
+              case 'phaseChange':
+                this.startPhaseCountdown(
+                  element.newPhase,
+                  element.endTimestamp
+                );
                 break;
               default:
                 console.log('Unknown data contents', { key });
@@ -272,6 +330,34 @@ export default {
 </script>
 
 <style scoped>
+.game-container {
+  width: 100%;
+  min-height: 100vh;
+  padding: 20px;
+  background: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #333;
+  position: relative;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2196f3, #1976d2);
+  transition: width 0.05s linear;
+  box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+}
 .game-container {
   width: 100%;
   min-height: 100vh;

@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hittrivia.app.model.Track;
+import com.hittrivia.app.service.GameMessageService;
 
 import lombok.Getter;
 import tools.jackson.databind.ObjectMapper;
@@ -29,7 +30,8 @@ public class Game {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
 
-    private Consumer<String> messageBroadcaster;
+    private Consumer<Map<String, Object>> messageBroadcaster;
+    private Consumer<Phase> phaseChangeCallback;
 
     private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -55,17 +57,35 @@ public class Game {
 
         this.quizz.loadTracks(configuration);
 
-        broadcastMessage(Map.of("type","data", "tits", "hurrr"));
+        broadcastMessage(Map.of("type","data"));
+
+        startPhaseWithTimer(Phase.PLAYING_MUSIC, 10);
+
+        // Now we start the first wait period of 10 or so seconds. Then we play the song.
     }
 
-    public void setMessageBroadcaster(Consumer<String> broadcaster) {
+    private void startPhaseWithTimer(Phase newPhase, int durationSeconds) {
+        phase = newPhase;
+
+        broadcastMessage(Map.of(
+            "type", GameMessageService.MessageType.DATA.getValue(),
+            "phaseChange", Map.of(
+                "newPhase", newPhase.toString(),
+                "endTimestamp", System.currentTimeMillis() + (durationSeconds * 1000))
+              // Absolute time when phase ends
+        ));
+    
+        scheduleNext(this::advancePhase, durationSeconds);
+    }
+
+    public void setMessageBroadcaster(Consumer<Map<String, Object>> broadcaster) {
         this.messageBroadcaster = broadcaster;
     }
 
     private void broadcastMessage(Map<String, Object> message) {
         if (messageBroadcaster != null) {
             try {
-                messageBroadcaster.accept(OBJECT_MAPPER.writeValueAsString(message));
+                messageBroadcaster.accept(message);
             } catch (Exception e) {
                 System.out.println("Failed to broadcast message: " + message);
             }
@@ -85,7 +105,8 @@ public class Game {
 
     public void startGame(Consumer<Phase> onPhaseChange) {
         // if (phase != Phase.WAITING_CONFIG) return;
-        advancePhase(onPhaseChange);
+        this.phaseChangeCallback = onPhaseChange;
+        advancePhase();
     }
 
     public static class PhaseDelays {
@@ -95,35 +116,35 @@ public class Game {
         private static final int FINISHED_DELAY = 120;
     }
 
-    public void advancePhase(Consumer<Phase> onPhaseChange) {
+    public void advancePhase() {
         switch(phase) {
             case WAITING_CONFIG:
                 break;
             case WAITING:
                 phase = Phase.PLAYING_MUSIC;
-                onPhaseChange.accept(phase);
-                scheduleNext(() -> advancePhase(onPhaseChange), PhaseDelays.MUSIC_DELAY);
+                if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
+                scheduleNext(this::advancePhase, PhaseDelays.MUSIC_DELAY);
                 break;
             case PLAYING_MUSIC:
                 phase = Phase.GUESSING;
-                onPhaseChange.accept(phase);
-                scheduleNext(() -> advancePhase(onPhaseChange), PhaseDelays.MUSIC_DELAY);
+                if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
+                scheduleNext(this::advancePhase, PhaseDelays.MUSIC_DELAY);
                 break;
             case GUESSING:
                 phase = Phase.REVEAL;
-                onPhaseChange.accept(phase);
-                scheduleNext(() -> advancePhase(onPhaseChange), PhaseDelays.GUESS_DELAY);
+                if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
+                scheduleNext(this::advancePhase, PhaseDelays.GUESS_DELAY);
                 break;
             case REVEAL:
                 currentRound++;
                 if (currentRound >= tracks.size()) {
                     phase = Phase.FINISHED;
-                    onPhaseChange.accept(phase);
+                    if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
                     shutdown();
                 } else {
                     phase = Phase.PLAYING_MUSIC;
-                    onPhaseChange.accept(phase);
-                    scheduleNext(() -> advancePhase(onPhaseChange), PhaseDelays.FINISHED_DELAY);
+                    if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
+                    scheduleNext(this::advancePhase, PhaseDelays.FINISHED_DELAY);
                 }
             case FINISHED:
                 break;
