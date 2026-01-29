@@ -5,6 +5,13 @@ dist
 tmp
 out-tsc
 
+# Java/Maven build output
+target/
+*.class
+*.jar
+*.war
+!**/mvnw.jar
+
 # dependencies
 node_modules
 
