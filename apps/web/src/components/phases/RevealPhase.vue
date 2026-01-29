@@ -67,7 +67,8 @@ export default {
       if (!this.youtubeVideoId) return null;
 
       // Start where the music left off: original start time + music duration
-      const startTime = (this.track?.startTimeSeconds || 0) + this.musicDuration;
+      const startTime =
+        (this.track?.startTimeSeconds || 0) + this.musicDuration;
       return `https://www.youtube.com/embed/${this.youtubeVideoId}?autoplay=1&start=${startTime}`;
     },
   },

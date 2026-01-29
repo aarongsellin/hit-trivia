@@ -285,15 +285,24 @@ export default {
               case 'phase': {
                 const newPhase = element.newPhase;
                 this.gameState = newPhase;
-                
+
                 // Track when PLAYING_MUSIC phase starts
                 if (newPhase === 'PLAYING_MUSIC') {
                   this.musicPhaseStartTime = Date.now();
                 }
                 // Calculate music duration when leaving PLAYING_MUSIC phase
-                else if (this.musicPhaseStartTime && newPhase !== 'PLAYING_MUSIC') {
-                  this.musicDuration = Math.floor((Date.now() - this.musicPhaseStartTime) / 1000);
-                  console.log('Music played for:', this.musicDuration, 'seconds');
+                else if (
+                  this.musicPhaseStartTime &&
+                  newPhase !== 'PLAYING_MUSIC'
+                ) {
+                  this.musicDuration = Math.floor(
+                    (Date.now() - this.musicPhaseStartTime) / 1000
+                  );
+                  console.log(
+                    'Music played for:',
+                    this.musicDuration,
+                    'seconds'
+                  );
                 }
                 break;
               }
