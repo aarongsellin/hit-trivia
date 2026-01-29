@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,7 +31,7 @@ public class Game {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
 
-    private Consumer<Map<String, Object>> messageBroadcaster;
+    private BiConsumer<GameMessageService.MessageType, Map<String, Object>> messageBroadcaster;
     private Consumer<Phase> phaseChangeCallback;
 
     private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -46,6 +47,7 @@ public class Game {
         this.quizz = new Quizz();
     }
 
+    // This also starts the game...
     public void setConfiguration(JsonNode configuration) {
 
         System.out.println("configuration in game class: " + configuration);
@@ -55,37 +57,104 @@ public class Game {
 
         // We can send all the tracks to all the users at once here.
 
-        this.quizz.loadTracks(configuration);
+        quizz.loadTracks(configuration);
 
-        broadcastMessage(Map.of("type","data"));
+        broadcastMessage(GameMessageService.MessageType.DATA, Map.of("tracks", quizz.getTracks()));
 
-        startPhaseWithTimer(Phase.PLAYING_MUSIC, 10);
+        // Send initial round info
+        broadcastMessage(GameMessageService.MessageType.DATA, Map.of("currentRound", currentRound));
 
-        // Now we start the first wait period of 10 or so seconds. Then we play the song.
+        // We have to tell the clients that we are in the waiting phase right now.
+        broadcastMessage(GameMessageService.MessageType.DATA, Map.of("phase", Map.of("newPhase", Phase.WAITING)));
+
+        // Tell the clients that the music phase begins in x seconds.
+        startPhaseWithTimer(Phase.PLAYING_MUSIC, 3);
     }
 
+    /*
+    This function starts a new phase after durationSeconds has passed.
+    */
     private void startPhaseWithTimer(Phase newPhase, int durationSeconds) {
-        phase = newPhase;
+        // If there is a task, and the currentTask is not done.
+        // Then cancel?
+        if (currentTask != null && !currentTask.isDone()) {
+            // But here we do not interrupt the task if it is running?
+            currentTask.cancel(false);
+        }
 
-        broadcastMessage(Map.of(
-            "type", GameMessageService.MessageType.DATA.getValue(),
+        broadcastMessage(GameMessageService.MessageType.DATA, Map.of(
             "phaseChange", Map.of(
                 "newPhase", newPhase.toString(),
                 "endTimestamp", System.currentTimeMillis() + (durationSeconds * 1000))
-              // Absolute time when phase ends
         ));
-    
-        scheduleNext(this::advancePhase, durationSeconds);
+
+        currentTask = scheduler.schedule(() -> {
+            this.phase = newPhase;
+            // Broadcast that we're now in this phase
+            broadcastMessage(GameMessageService.MessageType.DATA, Map.of("phase", Map.of("newPhase", newPhase.toString())));
+            handlePhaseTransition(newPhase);
+        }, durationSeconds, TimeUnit.SECONDS);
+
+        // We have to be careful here not to start a bunch of threads that take up things on the processor.
     }
 
-    public void setMessageBroadcaster(Consumer<Map<String, Object>> broadcaster) {
+    private void handlePhaseTransition(Phase newPhase) {
+        switch (newPhase) {
+            case WAITING:
+                // A wait for start.
+                startPhaseWithTimer(Phase.PLAYING_MUSIC, PhaseDelays.WAIT_DELAY);
+                break;
+            case PLAYING_MUSIC:
+                // Broadcast current round so frontend knows which track to play
+                broadcastMessage(GameMessageService.MessageType.DATA, Map.of("currentRound", currentRound));
+                // Start the guessing phase after the music has played.
+                startPhaseWithTimer(Phase.GUESSING, PhaseDelays.MUSIC_DELAY);
+                break;
+            case GUESSING:
+                // Start reveal phase after the guessing phase is done.
+                startPhaseWithTimer(Phase.REVEAL, PhaseDelays.GUESS_DELAY);
+                break;
+            case REVEAL:
+                // Broadcast current round for reveal phase
+                broadcastMessage(GameMessageService.MessageType.DATA, Map.of("currentRound", currentRound));
+                currentRound++;
+                if (currentRound < quizz.getTracks().size()) {
+                    startPhaseWithTimer(Phase.WAITING, 5);
+                } else {
+                    startPhaseWithTimer(Phase.FINISHED, PhaseDelays.REVEAL_DELAY);
+                }
+                break;
+            case FINISHED:
+                cleanup();
+                break;
+        }
+    }
+
+    public Track getCurrentTrack() {
+        if (quizz.getTracks() == null || currentRound >= quizz.getTracks().size()) return null;
+        return quizz.getTracks().get(currentRound);
+    }
+
+    public void shutdown() {
+        if (currentTask != null) {
+            currentTask.cancel(false);
+        }
+        // Don't shutdown shared scheduler!
+    }
+
+    private void cleanup() {
+        shutdown();
+        // Additional cleanup logic
+    }
+
+    public void setMessageBroadcaster(BiConsumer<GameMessageService.MessageType, Map<String, Object>> broadcaster) {
         this.messageBroadcaster = broadcaster;
     }
 
-    private void broadcastMessage(Map<String, Object> message) {
+    private void broadcastMessage(GameMessageService.MessageType dataType, Map<String, Object> message) {
         if (messageBroadcaster != null) {
             try {
-                messageBroadcaster.accept(message);
+                messageBroadcaster.accept(dataType,message);
             } catch (Exception e) {
                 System.out.println("Failed to broadcast message: " + message);
             }
@@ -101,68 +170,13 @@ public class Game {
         FINISHED,
     }
 
-
-
-    public void startGame(Consumer<Phase> onPhaseChange) {
-        // if (phase != Phase.WAITING_CONFIG) return;
-        this.phaseChangeCallback = onPhaseChange;
-        advancePhase();
-    }
-
     public static class PhaseDelays {
-        private static final int MUSIC_DELAY = 30;
-        private static final int GUESS_DELAY = 15;
-        private static final int REVEAL_DELAY = 15;
+        private static final int MUSIC_DELAY = 15;
+        private static final int GUESS_DELAY = 3;
+        private static final int REVEAL_DELAY = 3;
+        private static final int WAIT_DELAY = 3;
+
         private static final int FINISHED_DELAY = 120;
-    }
-
-    public void advancePhase() {
-        switch(phase) {
-            case WAITING_CONFIG:
-                break;
-            case WAITING:
-                phase = Phase.PLAYING_MUSIC;
-                if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
-                scheduleNext(this::advancePhase, PhaseDelays.MUSIC_DELAY);
-                break;
-            case PLAYING_MUSIC:
-                phase = Phase.GUESSING;
-                if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
-                scheduleNext(this::advancePhase, PhaseDelays.MUSIC_DELAY);
-                break;
-            case GUESSING:
-                phase = Phase.REVEAL;
-                if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
-                scheduleNext(this::advancePhase, PhaseDelays.GUESS_DELAY);
-                break;
-            case REVEAL:
-                currentRound++;
-                if (currentRound >= tracks.size()) {
-                    phase = Phase.FINISHED;
-                    if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
-                    shutdown();
-                } else {
-                    phase = Phase.PLAYING_MUSIC;
-                    if (phaseChangeCallback != null) phaseChangeCallback.accept(phase);
-                    scheduleNext(this::advancePhase, PhaseDelays.FINISHED_DELAY);
-                }
-            case FINISHED:
-                break;
-        }
-    }
-    
-    private void scheduleNext(Runnable task, int delaySeconds) {
-        currentTask = scheduler.schedule(task, delaySeconds, TimeUnit.SECONDS);
-    }
-
-    public void shutdown() {
-        if (currentTask != null) currentTask.cancel(false);
-        scheduler.shutdown();
-    }
-
-    public Track getCurrentTrack() {
-        if (tracks == null || currentRound >= tracks.size()) return null;
-        return tracks.get(currentRound);
     }
 
     public void freezePlayer(String playerId) {

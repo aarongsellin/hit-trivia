@@ -92,12 +92,11 @@ public class GameMessageService {
     private void handleConfiguration(WebSocketSession session, String gameId, JsonNode value) {
         // We save the configuration to the game object
         
-
         // We start procuring songs!
         Game game = gameService.getGame(gameId);
 
         // Set up the broadcaster callback so the Game can send messages to all players
-        game.setMessageBroadcaster(jsonMessage -> {
+        game.setMessageBroadcaster((messageType, jsonMessage) -> {
             List<WebSocketSession> sessions = gameSessions.get(gameId);
             if (sessions != null) {
                 sessions.removeIf(s -> !s.isOpen());
@@ -105,7 +104,7 @@ public class GameMessageService {
                 for (WebSocketSession clientSession : sessions) {
                     try {
                         // clientSession.sendMessage(new TextMessage(jsonMessage));
-                        sendJsonMessage(clientSession, MessageType.DATA, jsonMessage);
+                        sendJsonMessage(clientSession, messageType, jsonMessage);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -114,11 +113,6 @@ public class GameMessageService {
         });
 
         game.setConfiguration(value);
-
-    game.startGame(newPhase -> {
-        // Phase change logic
-        System.out.println("Game has new phase: " + newPhase);
-    });
     }
 
     private void handleGuess(WebSocketSession session, String gameId, JsonNode value) {
@@ -159,8 +153,6 @@ public class GameMessageService {
             // This here might be a rotten solution.
             if (Objects.equals(game.getAdmin(), null)) {
                 game.setAdmin(newPlayerId);
-
-                game.startGame(null);
 
                 sendJsonMessage(session, MessageType.DATA, Map.of(PayloadType.admin, true));
                 // Maybe, when we want information from the client we get use a like

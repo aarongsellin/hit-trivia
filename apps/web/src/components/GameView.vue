@@ -23,79 +23,44 @@
       </div>
     </div>
 
-    <!-- Admin Configuration View -->
-    <div v-if="gameState === 'WAITING_CONFIG' && isAdmin" class="config-layout">
-      <!-- <div class="qr-section">
-        <h2>Share Game</h2>
-        <qrcode-vue :value="gameUrl" size="300"></qrcode-vue>
-        <p class="qr-text">Scan to join the game</p>
-      </div>
+    <!-- Phase Components -->
+    <ConfigPhase
+      v-if="gameState === 'WAITING_CONFIG' && isAdmin"
+      :selectedGenre="selectedGenre"
+      :selectedDecade="selectedDecade"
+      :selectedObscurity="selectedObscurity"
+      @update:genre="selectedGenre = $event"
+      @update:decade="selectedDecade = $event"
+      @update:obscurity="selectedObscurity = $event"
+      @start-game="startGame"
+    />
 
-      <div class="separator"></div> -->
+    <WaitingConfigPhase
+      v-else-if="gameState === 'WAITING_CONFIG' && !isAdmin"
+    />
 
-      <div class="config-section">
-        <h2>Game Configuration</h2>
+    <WaitingPhase v-else-if="gameState === 'WAITING'" />
 
-        <div class="config-group">
-          <label>Genre</label>
-          <div class="option-grid">
-            <button
-              v-for="genre in genres"
-              :key="genre"
-              @click="selectedGenre = genre"
-              :class="['option-btn', { active: selectedGenre === genre }]"
-            >
-              {{ genre }}
-            </button>
-          </div>
-        </div>
+    <PlayingMusicPhase
+      v-else-if="gameState === 'PLAYING_MUSIC'"
+      :track="currentTrack"
+    />
 
-        <div class="config-group">
-          <label>Decade</label>
-          <div class="option-grid">
-            <button
-              v-for="decade in decades"
-              :key="decade"
-              @click="selectedDecade = decade"
-              :class="['option-btn', { active: selectedDecade === decade }]"
-            >
-              {{ decade }}
-            </button>
-          </div>
-        </div>
+    <GuessingPhase
+      v-else-if="gameState === 'GUESSING'"
+      @submit-guess="handleGuessSubmit"
+    />
 
-        <div class="config-group">
-          <label>Obscurity</label>
-          <div class="obscurity-slider">
-            <input
-              v-model.number="selectedObscurity"
-              type="range"
-              min="1"
-              max="5"
-              class="slider"
-            />
-            <span class="obscurity-label">{{
-              obscurityLabels[selectedObscurity - 1]
-            }}</span>
-          </div>
-        </div>
+    <RevealPhase
+      v-else-if="gameState === 'REVEAL'"
+      :track="currentTrack"
+      :musicDuration="musicDuration"
+    />
 
-        <button @click="startGame()" class="start-btn">Start Game</button>
-      </div>
-    </div>
-
-    <!-- Non-Admin View -->
-    <div v-else-if="playerId && !isAdmin" class="waiting-layout">
-      <!-- <div class="qr-section-full">
-        <h2>Join Game</h2>
-        <qrcode-vue :value="gameUrl" size="300"></qrcode-vue>
-        <p class="qr-text">Scan to join</p>
-      </div> -->
-
-      <div class="waiting-message">
-        <p>Waiting for game creator to start...</p>
-      </div>
-    </div>
+    <FinishedPhase
+      v-else-if="gameState === 'FINISHED'"
+      @play-again="handlePlayAgain"
+    />
 
     <!-- Initial Loading - Not joined yet -->
     <div v-else class="loading">
@@ -117,7 +82,13 @@
 <script>
 import { useRoute } from 'vue-router';
 import { useWebSocket } from '@vueuse/core';
-// import QrcodeVue from 'qrcode.vue';
+import ConfigPhase from './phases/ConfigPhase.vue';
+import WaitingConfigPhase from './phases/WaitingConfigPhase.vue';
+import WaitingPhase from './phases/WaitingPhase.vue';
+import PlayingMusicPhase from './phases/PlayingMusicPhase.vue';
+import GuessingPhase from './phases/GuessingPhase.vue';
+import RevealPhase from './phases/RevealPhase.vue';
+import FinishedPhase from './phases/FinishedPhase.vue';
 
 const isJson = (data) => {
   try {
@@ -130,7 +101,13 @@ const isJson = (data) => {
 
 export default {
   components: {
-    // QrcodeVue,
+    ConfigPhase,
+    WaitingConfigPhase,
+    WaitingPhase,
+    PlayingMusicPhase,
+    GuessingPhase,
+    RevealPhase,
+    FinishedPhase,
   },
   data() {
     return {
@@ -152,19 +129,16 @@ export default {
       progressInterval: null,
 
       // Configuration options
-      genres: ['Pop', 'Rock', 'Hip-Hop', 'Country', 'Electronic', 'Jazz'],
-      decades: ['1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'],
-      obscurityLabels: [
-        'Very Famous',
-        'Famous',
-        'Known',
-        'Obscure',
-        'Very Obscure',
-      ],
-
       selectedGenre: 'Pop',
       selectedDecade: '2000s',
       selectedObscurity: 3,
+
+      // Tracks and current track
+      tracks: [],
+      currentTrack: null,
+      currentRound: 0,
+      musicDuration: 0, // How long the music played for
+      musicPhaseStartTime: null, // When PLAYING_MUSIC phase started
     };
   },
   created: function () {
@@ -225,6 +199,21 @@ export default {
 
       this.socket.send(toSend);
     },
+    handleGuessSubmit(guess) {
+      console.log('Guess submitted:', guess);
+      // Send guess to backend
+      this.socket.send(
+        JSON.stringify({
+          type: 'data',
+          action: 'guess',
+          guess: guess,
+        })
+      );
+    },
+    handlePlayAgain() {
+      console.log('Play again clicked');
+      // Reset game or navigate back to lobby
+    },
     startPhaseCountdown(newPhase, endTimestamp) {
       // Clear any existing interval
       if (this.progressInterval) {
@@ -260,8 +249,8 @@ export default {
         clearInterval(this.progressInterval);
       }
 
-      // Handle the phase transition
-      console.log('Phase changed to:', phase);
+      // Timer completed - backend will send the phase update message
+      console.log('Countdown completed for:', phase);
     },
     handleMessage(data) {
       this.messages.push({
@@ -293,11 +282,37 @@ export default {
               case 'gameState':
                 this.gameState = element;
                 break;
+              case 'phase': {
+                const newPhase = element.newPhase;
+                this.gameState = newPhase;
+                
+                // Track when PLAYING_MUSIC phase starts
+                if (newPhase === 'PLAYING_MUSIC') {
+                  this.musicPhaseStartTime = Date.now();
+                }
+                // Calculate music duration when leaving PLAYING_MUSIC phase
+                else if (this.musicPhaseStartTime && newPhase !== 'PLAYING_MUSIC') {
+                  this.musicDuration = Math.floor((Date.now() - this.musicPhaseStartTime) / 1000);
+                  console.log('Music played for:', this.musicDuration, 'seconds');
+                }
+                break;
+              }
               case 'phaseChange':
                 this.startPhaseCountdown(
                   element.newPhase,
                   element.endTimestamp
                 );
+                break;
+              case 'tracks':
+                this.tracks = element;
+                console.log('Received tracks:', element);
+                break;
+              case 'currentRound':
+                this.currentRound = element;
+                if (this.tracks && this.tracks[element]) {
+                  this.currentTrack = this.tracks[element];
+                  console.log('Current track:', this.currentTrack);
+                }
                 break;
               default:
                 console.log('Unknown data contents', { key });
@@ -358,14 +373,6 @@ export default {
   transition: width 0.05s linear;
   box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
 }
-.game-container {
-  width: 100%;
-  min-height: 100vh;
-  padding: 20px;
-  background: #f5f5f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #333;
-}
 
 .header {
   background: white;
@@ -400,186 +407,6 @@ export default {
 .debug-buttons button:hover {
   background: #f9f9f9;
   border-color: #999;
-}
-
-/* Config Layout - Admin with Configuration */
-.config-layout {
-  max-width: 800px;
-  margin: 0 auto 30px;
-}
-
-.qr-section {
-  background: white;
-  padding: 40px;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.qr-section h2,
-.config-section h2 {
-  margin-top: 0;
-  color: #333;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.qr-section-full {
-  background: white;
-  padding: 40px;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  max-width: 400px;
-  margin: 50px auto;
-}
-
-.qr-text {
-  margin-top: 16px;
-  font-size: 14px;
-  color: #666;
-}
-
-.separator {
-  width: 1px;
-  background: #e0e0e0;
-  min-height: 400px;
-}
-
-.config-section {
-  background: white;
-  padding: 40px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-}
-
-.config-group {
-  margin-bottom: 32px;
-}
-
-.config-group label {
-  display: block;
-  font-weight: 600;
-  color: #000;
-  margin-bottom: 12px;
-  font-size: 15px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.option-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.option-btn {
-  padding: 10px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s ease;
-}
-
-.option-btn:hover {
-  background: #f9f9f9;
-  border-color: #999;
-}
-
-.option-btn.active {
-  background: #000;
-  color: white;
-  border-color: #000;
-}
-
-.obscurity-slider {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.slider {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: #ddd;
-  outline: none;
-  -webkit-appearance: none;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #000;
-  cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #000;
-  cursor: pointer;
-  border: none;
-}
-
-.obscurity-label {
-  text-align: center;
-  color: #333;
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.start-btn {
-  width: 100%;
-  padding: 12px;
-  background: #000;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  margin-top: 16px;
-}
-
-.start-btn:hover {
-  background: #333;
-}
-
-/* Waiting Layout - Non-Admin */
-.waiting-layout {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 70vh;
-}
-
-.waiting-message {
-  background: white;
-  padding: 40px 60px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  text-align: center;
-}
-
-.waiting-message p {
-  font-size: 18px;
-  color: #333;
-  margin: 0;
-  font-weight: 500;
 }
 
 .loading {
@@ -627,49 +454,9 @@ export default {
   border-bottom: none;
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .config-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .separator {
-    width: 100%;
-    height: 2px;
-    min-height: auto;
-  }
-
-  .option-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
   .game-container {
     padding: 10px;
-  }
-
-  .config-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .option-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .qr-section,
-  .config-section {
-    padding: 20px;
-  }
-
-  .waiting-layout {
-    gap: 20px;
-  }
-
-  .qr-section-full {
-    padding: 20px;
-    margin: 30px auto;
   }
 }
 </style>
