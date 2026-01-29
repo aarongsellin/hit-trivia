@@ -83,11 +83,16 @@ public class GameMessageService {
             case "guess":
                 handleGuess(session, gameId, value);
                 break;
+            case "action":
+                handleAction(session, gameId, value);
+                break;
             default:
                 System.out.println("Unknown field: " + key);
                 break;
         }
     }
+
+    private void handleAction(WebSocketSession session, String gameId, JsonNode value) {}
 
     private void handleConfiguration(WebSocketSession session, String gameId, JsonNode value) {
         // We save the configuration to the game object
