@@ -24,3 +24,15 @@ Here I go over the steps for optimization that I made and why.
 **Time Conformity**: All phase changes are based around a detla from what the server regards as the current time.
 
 **Crash Stuff**: We store each started game in Redis, when anything changes we update the relevant template in redis for each game. When the server startsup it will first check Redis for any games that were started and that are still in progress prior to the crash. This ensures that games get re-instated and not lost even after a crash.
+
+Why only the host is allowed to play the Music.
+
+Game creator need to be able to set timer states.
+
+Apple Music click funnel.
+
+Autoplay songs or click to continue.
+
+Användare behöver skriva in ett namn
+
+Tydligt visa för användaren om de tappar uppkoppling till spelet

@@ -26,8 +26,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         super.afterConnectionEstablished(session);
-        String roomId = getRoomIdFromSession(session);
-        gameMessageService.handleConnectionEstablished(session, roomId);
+        gameMessageService.handleConnectionEstablished(session);
     }
 
     @Override

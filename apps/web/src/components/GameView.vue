@@ -205,8 +205,7 @@ export default {
       this.socket.send(
         JSON.stringify({
           type: 'data',
-          action: 'guess',
-          guess: guess,
+          action: { type: 'guess', guess },
         })
       );
     },

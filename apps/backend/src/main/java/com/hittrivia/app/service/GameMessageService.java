@@ -15,11 +15,12 @@ import org.springframework.web.socket.WebSocketSession;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hittrivia.app.game.Game;
+import com.hittrivia.app.model.GameWebSocketSession;
 
 @Service
 public class GameMessageService {
     private final GameService gameService;
-    private final Map<String, List<WebSocketSession>> gameSessions = new ConcurrentHashMap<>();
+    private final Map<WebSocketSession, GameWebSocketSession> sessionContexts = new ConcurrentHashMap<>();
 
     public GameMessageService(GameService gameService) {
         this.gameService = gameService;
@@ -80,9 +81,6 @@ public class GameMessageService {
             case "configuration":
                 handleConfiguration(session, gameId, value);
                 break;
-            case "guess":
-                handleGuess(session, gameId, value);
-                break;
             case "action":
                 handleAction(session, gameId, value);
                 break;
@@ -92,7 +90,19 @@ public class GameMessageService {
         }
     }
 
-    private void handleAction(WebSocketSession session, String gameId, JsonNode value) {}
+    private void handleAction(WebSocketSession session, String gameId, JsonNode value) {
+        String actionType = value.get("type").asText();
+
+        switch(actionType) {
+            case "guess":
+                handleActionGuess(session, value.get("guess"));
+                break;
+            default:
+                System.out.println("Unknown action type:" + actionType);
+                break;
+        }
+        
+    }
 
     private void handleConfiguration(WebSocketSession session, String gameId, JsonNode value) {
         // We save the configuration to the game object
@@ -120,8 +130,9 @@ public class GameMessageService {
         game.setConfiguration(value);
     }
 
-    private void handleGuess(WebSocketSession session, String gameId, JsonNode value) {
-
+    // Add function on session for getting the game id directly
+    private void handleActionGuess(WebSocketSession session, String gameId, String guess) {
+        GameService.getGame()
     }
 
     private void handlePlayerJoin(String playerId, WebSocketSession session, String gameId) {
@@ -243,11 +254,11 @@ public class GameMessageService {
         session.sendMessage(new TextMessage(OBJECT_MAPPER.writeValueAsString(msg)));
     }
 
-    public void handleConnectionEstablished(WebSocketSession session, String gameId) {
-        // Well here we can really only check if the game exists
+    public void handleConnectionEstablished(WebSocketSession session) {
+        String path = session.getUri().getPath();
+        String gameId =  path.substring(path.lastIndexOf("/") + 1);
+        
         if (gameService.getGame(gameId) == null) {
-            System.out.println("Game with ID " + gameId + " does not exist.");
-
             try {
                 sendJsonMessage(session, MessageType.ERROR, Map.of("message","Game with ID " + gameId + " does not exist."));
                 session.close();
