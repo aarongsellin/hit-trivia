@@ -1,6 +1,1 @@
-com\hittrivia\app\validators\JsonValidator.class
-com\hittrivia\app\config\SecurityConfig.class
-com\hittrivia\app\HitTriviaApplication.class
-com\hittrivia\app\dto\GameCountResponse.class
-com\hittrivia\app\dto\NewGameResponse.class
-com\hittrivia\app\config\WebSocketConfig.class
+com/hittrivia/app/service/GameService.class

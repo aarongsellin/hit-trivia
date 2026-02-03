@@ -11,8 +11,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.hittrivia.app.dto.MessageType;
 import com.hittrivia.app.model.Track;
-import com.hittrivia.app.service.GameMessageService;
 
 import lombok.Getter;
 import tools.jackson.databind.ObjectMapper;
@@ -31,7 +31,7 @@ public class Game {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
 
-    private BiConsumer<GameMessageService.MessageType, Map<String, Object>> messageBroadcaster;
+    private BiConsumer<MessageType, Map<String, Object>> messageBroadcaster;
     private Consumer<Phase> phaseChangeCallback;
 
     private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -59,13 +59,13 @@ public class Game {
 
         quizz.loadTracks(configuration);
 
-        broadcastMessage(GameMessageService.MessageType.DATA, Map.of("tracks", quizz.getTracks()));
+        broadcastMessage(MessageType.DATA, Map.of("tracks", quizz.getTracks()));
 
         // Send initial round info
-        broadcastMessage(GameMessageService.MessageType.DATA, Map.of("currentRound", currentRound));
+        broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
 
         // We have to tell the clients that we are in the waiting phase right now.
-        broadcastMessage(GameMessageService.MessageType.DATA, Map.of("phase", Map.of("newPhase", Phase.WAITING)));
+        broadcastMessage(MessageType.DATA, Map.of("phase", Map.of("newPhase", Phase.WAITING)));
 
         // Tell the clients that the music phase begins in x seconds.
         startPhaseWithTimer(Phase.PLAYING_MUSIC, 3);
@@ -82,7 +82,7 @@ public class Game {
             currentTask.cancel(false);
         }
 
-        broadcastMessage(GameMessageService.MessageType.DATA, Map.of(
+        broadcastMessage(MessageType.DATA, Map.of(
             "phaseChange", Map.of(
                 "newPhase", newPhase.toString(),
                 "endTimestamp", System.currentTimeMillis() + (durationSeconds * 1000))
@@ -91,7 +91,7 @@ public class Game {
         currentTask = scheduler.schedule(() -> {
             this.phase = newPhase;
             // Broadcast that we're now in this phase
-            broadcastMessage(GameMessageService.MessageType.DATA, Map.of("phase", Map.of("newPhase", newPhase.toString())));
+            broadcastMessage(MessageType.DATA, Map.of("phase", Map.of("newPhase", newPhase.toString())));
             handlePhaseTransition(newPhase);
         }, durationSeconds, TimeUnit.SECONDS);
 
@@ -106,7 +106,7 @@ public class Game {
                 break;
             case PLAYING_MUSIC:
                 // Broadcast current round so frontend knows which track to play
-                broadcastMessage(GameMessageService.MessageType.DATA, Map.of("currentRound", currentRound));
+                broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
                 // Start the guessing phase after the music has played.
                 startPhaseWithTimer(Phase.GUESSING, PhaseDelays.MUSIC_DELAY);
                 break;
@@ -116,7 +116,7 @@ public class Game {
                 break;
             case REVEAL:
                 // Broadcast current round for reveal phase
-                broadcastMessage(GameMessageService.MessageType.DATA, Map.of("currentRound", currentRound));
+                broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
                 currentRound++;
                 if (currentRound < quizz.getTracks().size()) {
                     startPhaseWithTimer(Phase.WAITING, 5);
@@ -147,16 +147,17 @@ public class Game {
         // Additional cleanup logic
     }
 
-    public void setMessageBroadcaster(BiConsumer<GameMessageService.MessageType, Map<String, Object>> broadcaster) {
+    public void setMessageBroadcaster(BiConsumer<MessageType, Map<String, Object>> broadcaster) {
         this.messageBroadcaster = broadcaster;
     }
 
-    private void broadcastMessage(GameMessageService.MessageType dataType, Map<String, Object> message) {
+    private void broadcastMessage(MessageType messageType, Map<String, Object> message) {
         if (messageBroadcaster != null) {
             try {
-                messageBroadcaster.accept(dataType,message);
+                messageBroadcaster.accept(messageType, message);
             } catch (Exception e) {
                 System.out.println("Failed to broadcast message: " + message);
+                e.printStackTrace();
             }
         }
     }
