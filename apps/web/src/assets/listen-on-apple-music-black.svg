@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 83" width="250" height="83">
+  <rect width="250" height="83" rx="12" fill="none" stroke="#000" stroke-width="2"/>
+  <text x="125" y="32" text-anchor="middle" fill="#000" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400">Listen on</text>
+  <g transform="translate(58, 40)">
+    <text x="0" y="22" fill="#000" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600">Apple Music</text>
+  </g>
+  <g transform="translate(30, 35)" fill="#000">
+    <path d="M20.57 1.763A2.628 2.628 0 0118.226 0h-.012a2.628 2.628 0 00-2.632 2.625v14.842a4.84 4.84 0 00-2.125-.494c-2.695 0-4.882 2.148-4.882 4.796 0 2.649 2.187 4.796 4.882 4.796 2.694 0 4.881-2.147 4.881-4.796V8.934c.76.47 2.25 1.241 3.773 1.241a.875.875 0 00.882-.868.875.875 0 00-.882-.868c-1.435 0-2.952-1.013-3.52-1.487V2.625c0-.29.1-.555.267-.764a.866.866 0 01.7-.352c.333 0 .625.188.77.462l.001.003c.084.168.131.357.131.558v.124a.875.875 0 00.882.869.875.875 0 00.882-.869V2.532c0-.274-.056-.534-.157-.77z" transform="scale(0.85)"/>
+  </g>
+</svg>

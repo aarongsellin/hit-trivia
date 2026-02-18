@@ -4,6 +4,8 @@ public record Track(
     String title,
     String artist,
     String album,
-    String url,
+    String previewUrl,
+    String artworkUrl,
+    String musicVideoUrl,
     int startTimeSeconds
 ) {}

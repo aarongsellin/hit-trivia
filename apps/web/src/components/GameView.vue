@@ -8,6 +8,7 @@
       ></div>
     </div>
 
+    <!-- DEBUG: Uncomment for development
     <div class="header">
       <p>Status: {{ socket.status }}</p>
       <p>
@@ -22,6 +23,7 @@
         <button @click="test()">JOIN</button>
       </div>
     </div>
+    -->
 
     <!-- Phase Components -->
     <ConfigPhase
@@ -29,6 +31,7 @@
       :selectedGenre="selectedGenre"
       :selectedDecade="selectedDecade"
       :selectedObscurity="selectedObscurity"
+      :gameUrl="gameUrl"
       @update:genre="selectedGenre = $event"
       @update:decade="selectedDecade = $event"
       @update:obscurity="selectedObscurity = $event"
@@ -51,6 +54,18 @@
       @submit-guess="handleGuessSubmit"
     />
 
+    <!-- Preload current track's music video during play/guess phases -->
+    <link
+      v-if="
+        (gameState === 'PLAYING_MUSIC' || gameState === 'GUESSING') &&
+        currentTrack?.musicVideoUrl
+      "
+      rel="preload"
+      :href="currentTrack.musicVideoUrl"
+      as="video"
+      type="video/mp4"
+    />
+
     <RevealPhase
       v-else-if="gameState === 'REVEAL'"
       :track="currentTrack"
@@ -63,10 +78,11 @@
     />
 
     <!-- Initial Loading - Not joined yet -->
-    <div v-else class="loading">
+    <!-- <div v-else class="loading">
       <p>Connecting to game...</p>
-    </div>
+    </div> -->
 
+    <!-- DEBUG: Uncomment for development
     <div class="send">
       <input v-model="inputMessage" placeholder="Debug message" />
     </div>
@@ -76,6 +92,7 @@
         <strong>{{ msg.sender }}:</strong> {{ msg.text }}
       </div>
     </div>
+    -->
   </div>
 </template>
 
@@ -116,7 +133,6 @@ export default {
       playerId: localStorage.getItem('playerId') || null,
       isAdmin: null,
       socket: null,
-      test: this.handlePlayerJoin,
       gameState: null,
       gameId: null,
       countdown: null,
@@ -139,6 +155,7 @@ export default {
       currentRound: 0,
       musicDuration: 0, // How long the music played for
       musicPhaseStartTime: null, // When PLAYING_MUSIC phase started
+      preloadedVideoUrl: null, // Currently preloaded video URL
     };
   },
   created: function () {
@@ -153,6 +170,9 @@ export default {
 
     this.socket = useWebSocket(`ws://${apiUrl}/ws/game/${this.gameId}`, {
       autoReconnect: true,
+      onConnected: () => {
+        this.handlePlayerJoin();
+      },
     });
 
     this.socket.open();
@@ -288,6 +308,7 @@ export default {
                 // Track when PLAYING_MUSIC phase starts
                 if (newPhase === 'PLAYING_MUSIC') {
                   this.musicPhaseStartTime = Date.now();
+                  this.preloadVideo();
                 }
                 // Calculate music duration when leaving PLAYING_MUSIC phase
                 else if (
@@ -331,6 +352,19 @@ export default {
         if (type === 'error') {
           console.log('received error');
         }
+      }
+    },
+    preloadVideo() {
+      if (
+        this.currentTrack?.musicVideoUrl &&
+        this.currentTrack.musicVideoUrl !== this.preloadedVideoUrl
+      ) {
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.src = this.currentTrack.musicVideoUrl;
+        video.load();
+        this.preloadedVideoUrl = this.currentTrack.musicVideoUrl;
+        console.log('Preloading video:', this.currentTrack.musicVideoUrl);
       }
     },
     sendMessage(message) {

@@ -3,20 +3,23 @@
     <div class="music-container">
       <h2>🎵 Listen Carefully!</h2>
 
-      <!-- Hidden YouTube Player for Audio -->
-      <div v-if="youtubeVideoId" class="video-container">
-        <iframe
-          :src="youtubeEmbedUrl"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-        ></iframe>
-      </div>
+      <!-- Apple Music Preview Audio -->
+      <audio
+        ref="audioPlayer"
+        :src="track?.previewUrl"
+        autoplay
+        @error="onAudioError"
+        @playing="isPlaying = true"
+        @ended="isPlaying = false"
+      ></audio>
 
-      <div class="music-visualizer">
+      <div class="music-visualizer" :class="{ playing: isPlaying }">
         <div class="bar" v-for="i in 8" :key="i"></div>
       </div>
       <p class="instruction">Guess the song...</p>
+      <p v-if="audioError" class="audio-error">
+        ⚠️ Could not play audio preview
+      </p>
     </div>
   </div>
 </template>
@@ -30,31 +33,43 @@ export default {
       default: null,
     },
   },
-  computed: {
-    youtubeVideoId() {
-      if (!this.track?.url) return null;
-
-      const url = this.track.url;
-
-      // Match youtube.com/watch?v=VIDEO_ID
-      const watchMatch = url.match(/[?&]v=([^&]+)/);
-      if (watchMatch) return watchMatch[1];
-
-      // Match youtu.be/VIDEO_ID
-      const shortMatch = url.match(/youtu\.be\/([^?]+)/);
-      if (shortMatch) return shortMatch[1];
-
-      // Match youtube.com/embed/VIDEO_ID
-      const embedMatch = url.match(/\/embed\/([^?]+)/);
-      if (embedMatch) return embedMatch[1];
-
-      return null;
+  data() {
+    return {
+      isPlaying: false,
+      audioError: false,
+    };
+  },
+  watch: {
+    track: {
+      handler(newTrack) {
+        if (newTrack?.previewUrl) {
+          this.audioError = false;
+          this.$nextTick(() => {
+            const audio = this.$refs.audioPlayer;
+            if (audio) {
+              audio.load();
+              audio.play().catch((err) => {
+                console.error('Audio playback failed:', err);
+                this.audioError = true;
+              });
+            }
+          });
+        }
+      },
+      immediate: true,
     },
-    youtubeEmbedUrl() {
-      if (!this.youtubeVideoId) return null;
-
-      const startTime = this.track?.startTimeSeconds || 0;
-      return `https://www.youtube.com/embed/${this.youtubeVideoId}?autoplay=1&start=${startTime}`;
+  },
+  beforeUnmount() {
+    const audio = this.$refs.audioPlayer;
+    if (audio) {
+      audio.pause();
+      audio.src = '';
+    }
+  },
+  methods: {
+    onAudioError(e) {
+      console.error('Audio error:', e);
+      this.audioError = true;
     },
   },
 };
@@ -82,17 +97,8 @@ export default {
   font-size: 28px;
 }
 
-.video-container {
-  margin-bottom: 32px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #000;
-}
-
-.video-container iframe {
-  width: 100%;
-  height: 315px;
-  display: block;
+audio {
+  display: none;
 }
 
 .music-visualizer {
@@ -104,10 +110,16 @@ export default {
   margin-bottom: 32px;
 }
 
-.bar {
+.music-visualizer .bar {
   width: 12px;
-  background: linear-gradient(to top, #2196f3, #1976d2);
+  background: #ccc;
   border-radius: 4px;
+  height: 20px;
+  transition: background 0.3s;
+}
+
+.music-visualizer.playing .bar {
+  background: linear-gradient(to top, #2196f3, #1976d2);
   animation: bounce 0.8s ease-in-out infinite;
 }
 
@@ -150,6 +162,12 @@ export default {
   font-size: 16px;
   color: #666;
   margin: 0;
+}
+
+.audio-error {
+  color: #e53935;
+  font-size: 14px;
+  margin-top: 12px;
 }
 
 @media (max-width: 768px) {

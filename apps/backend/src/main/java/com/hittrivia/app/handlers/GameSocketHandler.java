@@ -13,11 +13,11 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.CloseStatus;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.hittrivia.app.dto.ErrorResponse;
 import com.hittrivia.app.dto.MessageType;
 import com.hittrivia.app.game.Game;
 import com.hittrivia.app.model.GameWebSocketSession;
 import com.hittrivia.app.dto.GamePayloadType;
+import com.hittrivia.app.service.AppleMusicCatalogService;
 import com.hittrivia.app.service.GameService;
 import com.hittrivia.app.validators.JsonValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,10 +26,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class GameSocketHandler extends TextWebSocketHandler {
     private final Map<WebSocketSession, GameWebSocketSession> sessionContexts = new ConcurrentHashMap<>();
     private final GameService gameService;
+    private final AppleMusicCatalogService catalogService;
     private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public GameSocketHandler(GameService gameService) {
+    public GameSocketHandler(GameService gameService, AppleMusicCatalogService catalogService) {
         this.gameService = gameService;
+        this.catalogService = catalogService;
     }
 
     @Override
@@ -59,12 +61,6 @@ public class GameSocketHandler extends TextWebSocketHandler {
         super.afterConnectionClosed(session, status);
 
 
-    }
-
-    private void sendError(WebSocketSession session, String error) throws Exception {
-        ErrorResponse msg = new ErrorResponse(error);
-
-        session.sendMessage(new TextMessage(OBJECT_MAPPER.writeValueAsString(msg)));
     }
 
     @Override
@@ -159,6 +155,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
     private void handleConfiguration(GameWebSocketSession gameSession, JsonNode value) {
         Game game = gameService.getGame(gameSession.getGameId());
 
+        game.setCatalogService(catalogService);
         game.setConfiguration(value);
     }
 

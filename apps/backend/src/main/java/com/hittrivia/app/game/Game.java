@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hittrivia.app.dto.MessageType;
 import com.hittrivia.app.model.Track;
+import com.hittrivia.app.service.AppleMusicCatalogService;
 
 import lombok.Getter;
 import tools.jackson.databind.ObjectMapper;
@@ -27,6 +28,8 @@ public class Game {
 
     private Phase phase = Phase.WAITING_CONFIG;
     private int currentRound = 0;
+
+    private AppleMusicCatalogService catalogService;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
@@ -47,17 +50,16 @@ public class Game {
         this.quizz = new Quizz();
     }
 
+    public void setCatalogService(AppleMusicCatalogService catalogService) {
+        this.catalogService = catalogService;
+    }
+
     // This also starts the game...
     public void setConfiguration(JsonNode configuration) {
 
         System.out.println("configuration in game class: " + configuration);
 
-        // Here we find tracks with Apple Web Kit
-        // But for now we are using YouTube so whatever.
-
-        // We can send all the tracks to all the users at once here.
-
-        quizz.loadTracks(configuration);
+        quizz.loadTracks(configuration, catalogService);
 
         broadcastMessage(MessageType.DATA, Map.of("tracks", quizz.getTracks()));
 
@@ -174,7 +176,7 @@ public class Game {
     public static class PhaseDelays {
         private static final int MUSIC_DELAY = 15;
         private static final int GUESS_DELAY = 3;
-        private static final int REVEAL_DELAY = 3;
+        private static final int REVEAL_DELAY = 15;
         private static final int WAIT_DELAY = 3;
 
         private static final int FINISHED_DELAY = 120;

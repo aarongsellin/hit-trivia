@@ -1,65 +1,103 @@
 <template>
   <div class="config-layout">
-    <div class="config-section">
-      <h2>Game Configuration</h2>
+    <!-- Loading overlay -->
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="spinner-container">
+        <div class="spinner"></div>
+        <p>Loading tracks from Apple Music...</p>
+      </div>
+    </div>
 
-      <div class="config-group">
-        <label>Genre</label>
-        <div class="option-grid">
-          <button
-            v-for="genre in genres"
-            :key="genre"
-            @click="$emit('update:genre', genre)"
-            :class="['option-btn', { active: selectedGenre === genre }]"
-          >
-            {{ genre }}
-          </button>
+    <div v-else class="split-screen">
+      <!-- Left: Game Configuration -->
+      <div class="config-section">
+        <h2>Game Configuration</h2>
+
+        <div class="config-group">
+          <label>Genre</label>
+          <div class="option-grid">
+            <button
+              v-for="genre in genres"
+              :key="genre"
+              @click="$emit('update:genre', genre)"
+              :class="['option-btn', { active: selectedGenre === genre }]"
+            >
+              {{ genre }}
+            </button>
+          </div>
         </div>
+
+        <div class="config-group">
+          <label>Decade</label>
+          <div class="option-grid">
+            <button
+              v-for="decade in decades"
+              :key="decade"
+              @click="$emit('update:decade', decade)"
+              :class="['option-btn', { active: selectedDecade === decade }]"
+            >
+              {{ decade }}
+            </button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label>Obscurity</label>
+          <div class="obscurity-slider">
+            <input
+              :value="selectedObscurity"
+              @input="$emit('update:obscurity', Number($event.target.value))"
+              type="range"
+              min="1"
+              max="5"
+              class="slider"
+            />
+            <span class="obscurity-label">{{
+              obscurityLabels[selectedObscurity - 1]
+            }}</span>
+          </div>
+        </div>
+
+        <button @click="handleStart" class="start-btn">Start Game</button>
       </div>
 
-      <div class="config-group">
-        <label>Decade</label>
-        <div class="option-grid">
-          <button
-            v-for="decade in decades"
-            :key="decade"
-            @click="$emit('update:decade', decade)"
-            :class="['option-btn', { active: selectedDecade === decade }]"
-          >
-            {{ decade }}
-          </button>
+      <!-- Right: QR Code & Join Info -->
+      <div class="join-section">
+        <h2>Join the Game</h2>
+        <div class="qr-wrapper">
+          <QRCodeVue :value="gameUrl" :size="280" level="M" />
         </div>
-      </div>
-
-      <div class="config-group">
-        <label>Obscurity</label>
-        <div class="obscurity-slider">
-          <input
-            :value="selectedObscurity"
-            @input="$emit('update:obscurity', Number($event.target.value))"
-            type="range"
-            min="1"
-            max="5"
-            class="slider"
-          />
-          <span class="obscurity-label">{{
-            obscurityLabels[selectedObscurity - 1]
-          }}</span>
+        <p class="join-label">Scan to join</p>
+        <div class="join-url-box">
+          <span class="join-url">{{ gameUrl }}</span>
+          <button class="copy-btn" @click="copyUrl">{{ copyLabel }}</button>
         </div>
+        <p class="player-count" v-if="playerCount !== null">
+          {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} connected
+        </p>
       </div>
-
-      <button @click="$emit('start-game')" class="start-btn">Start Game</button>
     </div>
   </div>
 </template>
 
 <script>
+import QRCodeVue from 'qrcode.vue';
+
 export default {
   name: 'ConfigPhase',
+  components: { QRCodeVue },
   props: {
     selectedGenre: String,
     selectedDecade: String,
     selectedObscurity: Number,
+    gameUrl: {
+      type: String,
+      default: '',
+    },
+    playerCount: {
+      type: Number,
+      default: null,
+    },
   },
   emits: ['update:genre', 'update:decade', 'update:obscurity', 'start-game'],
   data() {
@@ -73,22 +111,159 @@ export default {
         'Obscure',
         'Very Obscure',
       ],
+      isLoading: false,
+      copyLabel: 'Copy',
     };
+  },
+  methods: {
+    handleStart() {
+      this.isLoading = true;
+      this.$emit('start-game');
+    },
+    async copyUrl() {
+      try {
+        await navigator.clipboard.writeText(this.gameUrl);
+        this.copyLabel = 'Copied!';
+        setTimeout(() => {
+          this.copyLabel = 'Copy';
+        }, 2000);
+      } catch {
+        this.copyLabel = 'Failed';
+      }
+    },
   },
 };
 </script>
 
 <style scoped>
 .config-layout {
-  max-width: 800px;
-  margin: 0 auto 30px;
+  width: 100%;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.spinner-container {
+  text-align: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-container p {
+  color: #666;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Split screen */
+.split-screen {
+  display: flex;
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: flex-start;
 }
 
 .config-section {
+  flex: 1;
   background: white;
   padding: 40px;
   border-radius: 8px;
   border: 1px solid #ddd;
+}
+
+.join-section {
+  width: 360px;
+  flex-shrink: 0;
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.join-section h2 {
+  margin: 0 0 24px 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.qr-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.join-label {
+  color: #999;
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.join-url-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5f5;
+  padding: 10px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.join-url {
+  flex: 1;
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+  text-align: left;
+}
+
+.copy-btn {
+  padding: 6px 14px;
+  background: #000;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.copy-btn:hover {
+  background: #333;
+}
+
+.player-count {
+  color: #4caf50;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.config-section h2 {
+  margin: 0 0 28px 0;
+  color: #333;
+  font-size: 20px;
 }
 
 .config-group {
@@ -192,6 +367,14 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .split-screen {
+    flex-direction: column-reverse;
+  }
+
+  .join-section {
+    width: 100%;
+  }
+
   .config-section {
     padding: 20px;
   }

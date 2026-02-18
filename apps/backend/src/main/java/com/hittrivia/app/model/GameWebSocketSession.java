@@ -11,6 +11,7 @@ import com.hittrivia.app.dto.MessageType;
 
 public class GameWebSocketSession {
     private final WebSocketSession session;
+    private String musicToken;
 
     private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -43,6 +44,10 @@ public class GameWebSocketSession {
         }
 
         return playerId.toString();
+    }
+
+    public String getMusicToken() {
+        return this.musicToken;
     }
 
     public WebSocketSession getSession() {

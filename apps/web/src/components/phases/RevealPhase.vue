@@ -2,26 +2,39 @@
   <div class="reveal-phase">
     <div class="reveal-container">
       <h2>The Answer Is...</h2>
+
+      <!-- Music Video Player -->
+      <div v-if="track?.musicVideoUrl" class="video-container">
+        <video
+          ref="videoPlayer"
+          :src="track.musicVideoUrl"
+          autoplay
+          playsinline
+          @error="videoError = true"
+        ></video>
+      </div>
+
+      <!-- Fallback: Album Artwork (if no music video) -->
+      <div v-else-if="track?.artworkUrl" class="artwork-container">
+        <img :src="track.artworkUrl" :alt="track?.title" class="artwork" />
+        <!-- Audio-only fallback -->
+        <audio
+          v-if="track?.previewUrl"
+          ref="audioPlayer"
+          :src="track.previewUrl"
+          autoplay
+        ></audio>
+      </div>
+
       <div class="answer-card">
         <div class="song-title">{{ track?.title || 'Unknown Song' }}</div>
         <div class="artist-name">{{ track?.artist || 'Unknown Artist' }}</div>
         <div class="album-name" v-if="track?.album">{{ track.album }}</div>
       </div>
 
-      <!-- YouTube Player -->
-      <div v-if="youtubeVideoId" class="video-container">
-        <iframe
-          :src="youtubeEmbedUrl"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-        ></iframe>
-      </div>
-
       <div class="scores">
         <h3>Scores This Round</h3>
         <div class="score-list">
-          <!-- Scores will be populated here -->
           <p class="placeholder">Calculating scores...</p>
         </div>
       </div>
@@ -42,35 +55,22 @@ export default {
       default: 0,
     },
   },
-  computed: {
-    youtubeVideoId() {
-      if (!this.track?.url) return null;
-
-      // Extract video ID from various YouTube URL formats
-      const url = this.track.url;
-
-      // Match youtube.com/watch?v=VIDEO_ID
-      const watchMatch = url.match(/[?&]v=([^&]+)/);
-      if (watchMatch) return watchMatch[1];
-
-      // Match youtu.be/VIDEO_ID
-      const shortMatch = url.match(/youtu\.be\/([^?]+)/);
-      if (shortMatch) return shortMatch[1];
-
-      // Match youtube.com/embed/VIDEO_ID
-      const embedMatch = url.match(/\/embed\/([^?]+)/);
-      if (embedMatch) return embedMatch[1];
-
-      return null;
-    },
-    youtubeEmbedUrl() {
-      if (!this.youtubeVideoId) return null;
-
-      // Start where the music left off: original start time + music duration
-      const startTime =
-        (this.track?.startTimeSeconds || 0) + this.musicDuration;
-      return `https://www.youtube.com/embed/${this.youtubeVideoId}?autoplay=1&start=${startTime}`;
-    },
+  data() {
+    return {
+      videoError: false,
+    };
+  },
+  beforeUnmount() {
+    const video = this.$refs.videoPlayer;
+    if (video) {
+      video.pause();
+      video.src = '';
+    }
+    const audio = this.$refs.audioPlayer;
+    if (audio) {
+      audio.pause();
+      audio.src = '';
+    }
   },
 };
 </script>
@@ -90,13 +90,27 @@ export default {
   border: 1px solid #ddd;
   text-align: center;
   width: 100%;
-  max-width: 600px;
+  max-width: 700px;
 }
 
 .reveal-container h2 {
   margin: 0 0 24px 0;
   color: #333;
   font-size: 24px;
+}
+
+.video-container {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-container video {
+  width: 100%;
+  max-height: 400px;
+  display: block;
+  border-radius: 8px;
 }
 
 .answer-card {
@@ -125,17 +139,19 @@ export default {
   font-style: italic;
 }
 
-.video-container {
-  margin-bottom: 32px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #000;
+.artwork-container {
+  margin-bottom: 24px;
 }
 
-.video-container iframe {
-  width: 100%;
-  height: 315px;
-  display: block;
+.artwork {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+audio {
+  display: none;
 }
 
 .scores {
