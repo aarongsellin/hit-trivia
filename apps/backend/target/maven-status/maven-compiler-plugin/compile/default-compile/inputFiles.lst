@@ -1,7 +1,6 @@
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\config\SecurityConfig.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\config\WebSocketConfig.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\controllers\HTTPController.java
-C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\AppleMusicTokenResponse.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\ErrorResponse.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\GameCountResponse.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\GamePayloadType.java
@@ -16,6 +15,7 @@ C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittri
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\HitTriviaApplication.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\model\GameWebSocketSession.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\model\Track.java
+C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\service\AppleMusicCatalogService.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\service\AppleMusicTokenService.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\service\GameService.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\validators\JsonValidator.java

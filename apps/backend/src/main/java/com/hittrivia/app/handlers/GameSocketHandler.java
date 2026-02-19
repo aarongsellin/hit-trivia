@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.aspectj.bridge.Message;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.TextMessage;
@@ -155,6 +156,15 @@ public class GameSocketHandler extends TextWebSocketHandler {
     private void handleConfiguration(GameWebSocketSession gameSession, JsonNode value) {
         Game game = gameService.getGame(gameSession.getGameId());
 
+        if (Objects.equals(game.getAdmin(), gameSession.getPlayerId()) == false) {
+            try {
+                gameSession.sendJsonMessage(MessageType.ERROR, Map.of("message", "Un-authorized request, you are not the admin."));
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
         game.setCatalogService(catalogService);
         game.setConfiguration(value);
     }
@@ -200,12 +210,15 @@ public class GameSocketHandler extends TextWebSocketHandler {
     private void handlePlayerJoin(GameWebSocketSession gameSession, String playerId) {
         Game game = gameService.getGame(gameSession.getGameId());
 
-        if (game.isPlayer(gameSession.getPlayerId())) {
-            // Re-assign the session to the playe
+        if (game.isPlayer(playerId)) {
+            // Re-assign the session to the player
+            gameSession.getSession().getAttributes().put("playerId", playerId);
 
             // Tell the user they have rejoined successfully.
             try {
                 gameSession.sendJsonMessage(MessageType.DATA, Map.of("gameState", game.getPhase()));
+                System.out.println("User has rejoined game, sending tracks: " + game.getQuizz().getTracks());
+                gameSession.sendJsonMessage(MessageType.DATA, Map.of("tracks", game.getQuizz().getTracks()));
 
                 if (Objects.equals(game.getAdmin(), gameSession.getPlayerId())) {
                     gameSession.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, true));
@@ -216,6 +229,8 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
             return;
         }
+
+        System.out.println("New player has joined game");
 
         // This means its a new player that wants to join the game.
         String newPlayerId = createPlayerId();

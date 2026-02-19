@@ -272,6 +272,10 @@ export default {
       console.log('Countdown completed for:', phase);
     },
     handleMessage(data) {
+      console.log(
+        'Received message from server: ',
+        JSON.stringify(data, null, 2)
+      );
       this.messages.push({
         text: data,
         sender: 'Server',
@@ -283,8 +287,6 @@ export default {
 
         if (type === 'data') {
           const keys = Object.keys(parsed);
-
-          console.log({ keys });
 
           for (let i = 0; i < Object.keys(parsed).length; ++i) {
             const key = keys.at(i);

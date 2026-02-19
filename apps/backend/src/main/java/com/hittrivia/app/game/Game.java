@@ -54,6 +54,10 @@ public class Game {
         this.catalogService = catalogService;
     }
 
+    public Quizz getQuizz() {
+        return this.quizz;
+    }
+
     // This also starts the game...
     public void setConfiguration(JsonNode configuration) {
 
