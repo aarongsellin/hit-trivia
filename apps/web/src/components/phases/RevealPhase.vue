@@ -33,9 +33,46 @@
       </div>
 
       <div class="scores">
-        <h3>Scores This Round</h3>
-        <div class="score-list">
-          <p class="placeholder">Calculating scores...</p>
+        <h3>Your Score</h3>
+
+        <!-- Player submitted a guess -->
+        <div v-if="guessResult" class="score-breakdown">
+          <div
+            class="score-row"
+            :class="{ correct: guessResult.titleScore > 0 }"
+          >
+            <span class="score-label">Title</span>
+            <span class="score-icon">{{
+              guessResult.titleScore > 0 ? '✓' : '✗'
+            }}</span>
+          </div>
+          <div
+            class="score-row"
+            :class="{ correct: guessResult.artistScore > 0 }"
+          >
+            <span class="score-label">Artist</span>
+            <span class="score-icon">{{
+              guessResult.artistScore > 0 ? '✓' : '✗'
+            }}</span>
+          </div>
+          <div
+            class="score-row"
+            :class="{ correct: guessResult.albumScore > 0 }"
+          >
+            <span class="score-label">Album</span>
+            <span class="score-icon">{{
+              guessResult.albumScore > 0 ? '✓' : '✗'
+            }}</span>
+          </div>
+          <div class="score-total">
+            <span>Round Score</span>
+            <span class="total-value">{{ guessResult.total }} / 3</span>
+          </div>
+        </div>
+
+        <!-- Player didn't guess -->
+        <div v-else class="no-guess">
+          <p>You didn't submit a guess this round.</p>
         </div>
       </div>
     </div>
@@ -53,6 +90,10 @@ export default {
     musicDuration: {
       type: Number,
       default: 0,
+    },
+    guessResult: {
+      type: Object,
+      default: null,
     },
   },
   data() {
@@ -164,13 +205,72 @@ audio {
   font-size: 18px;
 }
 
-.score-list {
-  background: #f5f5f5;
-  padding: 16px;
-  border-radius: 4px;
+.score-breakdown {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 16px 20px;
+  text-align: left;
 }
 
-.placeholder {
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  color: #999;
+}
+
+.score-row:last-of-type {
+  border-bottom: none;
+}
+
+.score-row.correct {
+  color: #333;
+}
+
+.score-label {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.score-icon {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.score-row.correct .score-icon {
+  color: #4caf50;
+}
+
+.score-row:not(.correct) .score-icon {
+  color: #ccc;
+}
+
+.score-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid #eee;
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+}
+
+.total-value {
+  font-size: 20px;
+  color: #667eea;
+}
+
+.no-guess {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.no-guess p {
   color: #999;
   font-size: 14px;
   margin: 0;

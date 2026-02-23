@@ -176,33 +176,6 @@
       </div>
     </section>
 
-    <!-- Apple Music Affiliate -->
-    <section class="affiliate">
-      <div class="section-container">
-        <div class="affiliate-card">
-          <img
-            src="https://tools.applemediaservices.com/api/artwork/US/music/ico.png?size=60"
-            alt="Apple Music"
-            class="affiliate-apple-icon"
-          />
-          <h3 class="affiliate-title">Don't have Apple Music yet?</h3>
-          <p class="affiliate-desc">Get access to over 100 million songs</p>
-          <a
-            :href="affiliateUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="apple-badge-link"
-            aria-label="Listen on Apple Music"
-          >
-            <img
-              :src="appleBadgeBlack"
-              alt="Listen on Apple Music"
-              class="apple-badge"
-            />
-          </a>
-        </div>
-      </div>
-    </section>
     <footer class="footer">
       <p>Built with ♫ &mdash; Hit Trivia</p>
       <p class="footer-apple">
@@ -843,23 +816,21 @@ export default {
   position: relative;
 }
 
-/* ─── Footer ───────────────────────────────────── */
-
 .footer {
   text-align: center;
   padding: 40px 24px;
   border-top: 1px solid #f3f4f6;
   font-size: 13px;
-  color: #d1d5db;
+  color: #000000;
 }
 
 .footer-apple {
   margin-top: 8px;
   font-size: 11px;
-  color: #d1d5db;
+  color: #afb0b3;
 }
 
-/* ─── Responsive ───────────────────────────────── */
+/* responsive */
 
 @media (max-width: 900px) {
   .features-grid {

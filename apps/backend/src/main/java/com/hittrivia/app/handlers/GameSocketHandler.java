@@ -131,7 +131,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
                 handleConfiguration(gameSession, value);
                 break;
             case "action":
-                handleAction(gameSession, value);
+                handlePlayerAction(gameSession, value);
                 break;
             default:
                 System.out.println("Unknown field: " + key);
@@ -139,12 +139,12 @@ public class GameSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void handleAction(GameWebSocketSession gameSession, JsonNode value) {
+    private void handlePlayerAction(GameWebSocketSession gameSession, JsonNode value) {
         String actionType = value.get("type").asText();
 
         switch(actionType) {
             case "guess":
-                handleActionGuess(gameSession, value.get("guess").toString());
+                handleActionGuess(gameSession, value.get("guess").asText());
                 break;
             default:
                 System.out.println("Unknown action type:" + actionType);
@@ -171,6 +171,26 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
     // Add function on session for getting the game id directly
     private void handleActionGuess(GameWebSocketSession session, String guess) {
+        Game game = gameService.getGame(session.getGameId());
+        if (game == null) return;
+
+        Game.GuessResult result = game.checkGuess(session.getPlayerId(), guess);
+
+        if (result != null) {
+            try {
+                session.sendJsonMessage(MessageType.DATA, Map.of(
+                    "guessResult", Map.of(
+                        "round", result.round(),
+                        "titleScore", result.titleScore(),
+                        "artistScore", result.artistScore(),
+                        "albumScore", result.albumScore(),
+                        "total", result.total()
+                    )
+                ));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private String createPlayerId() {
@@ -207,21 +227,21 @@ public class GameSocketHandler extends TextWebSocketHandler {
         });
     }
 
-    private void handlePlayerJoin(GameWebSocketSession gameSession, String playerId) {
-        Game game = gameService.getGame(gameSession.getGameId());
+    private void handlePlayerJoin(GameWebSocketSession session, String playerId) {
+        Game game = gameService.getGame(session.getGameId());
 
         if (game.isPlayer(playerId)) {
             // Re-assign the session to the player
-            gameSession.getSession().getAttributes().put("playerId", playerId);
+            session.getSession().getAttributes().put("playerId", playerId);
 
             // Tell the user they have rejoined successfully.
             try {
-                gameSession.sendJsonMessage(MessageType.DATA, Map.of("gameState", game.getPhase()));
+                session.sendJsonMessage(MessageType.DATA, Map.of("gameState", game.getPhase()));
                 System.out.println("User has rejoined game, sending tracks: " + game.getQuizz().getTracks());
-                gameSession.sendJsonMessage(MessageType.DATA, Map.of("tracks", game.getQuizz().getTracks()));
+                session.sendJsonMessage(MessageType.DATA, Map.of("tracks", game.getQuizz().getTracks()));
 
-                if (Objects.equals(game.getAdmin(), gameSession.getPlayerId())) {
-                    gameSession.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, true));
+                if (Objects.equals(game.getAdmin(), session.getPlayerId())) {
+                    session.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, true));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -234,7 +254,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
         // This means its a new player that wants to join the game.
         String newPlayerId = createPlayerId();
-        gameSession.getSession().getAttributes().put("playerId", newPlayerId);
+        session.getSession().getAttributes().put("playerId", newPlayerId);
 
         try {
             game.addPlayer(newPlayerId);
@@ -245,13 +265,13 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
                 setupGameBroadcaster(game);
 
-                gameSession.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, true));
+                session.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, true));
                 // Maybe, when we want information from the client we get use a like
                 // "wants": "configuration"
                 // from the server?
-                gameSession.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.configuration, true));
+                session.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.configuration, true));
             } else {
-                gameSession.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, false));
+                session.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, false));
             }
         } catch (Exception addError) {
             System.out.println("Could not add player to game: " + addError.getMessage());
@@ -259,11 +279,11 @@ public class GameSocketHandler extends TextWebSocketHandler {
             try {
                 // We do not want to send internal errors directly to the user, only
                 // that something failed.
-                gameSession.sendJsonMessage(MessageType.SERVER_ERROR, Map.of("message","Could not add player to game"));
+                session.sendJsonMessage(MessageType.SERVER_ERROR, Map.of("message","Could not add player to game"));
             } catch (Exception sendError) {
                 System.out.println("Failed to send error message: " + sendError.getMessage());
                 try {
-                    gameSession.close();
+                    session.close();
                 } catch (Exception exc) {
                     System.out.println("Could not close session after failing to add player.");
                 }
@@ -273,7 +293,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
             
         // Tell the user they have been added successfully!
         try {
-            gameSession.sendJsonMessage(MessageType.DATA, Map.of("playerId", newPlayerId, "gameState", game.getPhase()));
+            session.sendJsonMessage(MessageType.DATA, Map.of("playerId", newPlayerId, "gameState", game.getPhase()));
         } catch (Exception e) {
             e.printStackTrace();
         }

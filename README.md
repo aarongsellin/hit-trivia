@@ -1,8 +1,16 @@
+#### JUST NU
+
+Vi behöver ett sätt i frontend att sätta en spelare mitt i en phase. En check i gameView för när de får gameState, om en timestamp är inom en viss ram av tid så ska den automatiskt sätta upp allting ordentligt, och skippa ordentligt i playern. Vi behöver skicka med en startTimestamp och inte bara endTimestamp för gameState/phaseChange
+
 # Introduction
 
-Hit Trivia, som Hitser fast online. Öppna ett spel, välj årtal och eller gener, starta, QR kod visas på enheten och alla kan gå med.
+Hit Trivia is an online music quizz game that I built to learn Spring Boot. Anyone can create a game, invite their friends with a QR code, and see who has the best music knowledge.
 
 # How to setup
+
+```
+npx run dev
+```
 
 # Developer Story
 
@@ -25,14 +33,20 @@ Here I go over the steps for optimization that I made and why.
 
 **Crash Stuff**: We store each started game in Redis, when anything changes we update the relevant template in redis for each game. When the server startsup it will first check Redis for any games that were started and that are still in progress prior to the crash. This ensures that games get re-instated and not lost even after a crash.
 
+**Analytics**: We track failed requests to a Redis database, that way we can quickly see if a new update is increasing client failures.
+
+### Monetization
+
+Apple Music has a very strict roster of who is allowed to become an affiliate, only websites that drive strong and meaningfull trafic are allowed into their "" program. Therefor in the beginning the most viable option is to play an add before starting the game. But we have to be carefull as to not make it too intrisive, a banner add on each device as things are playing is OK and maybe a video add for the creator of the game when they hit create game.
+
 Why only the host is allowed to play the Music.
 
 Game creator need to be able to set timer states.
-
-Apple Music click funnel.
 
 Autoplay songs or click to continue.
 
 Användare behöver skriva in ett namn
 
 Tydligt visa för användaren om de tappar uppkoppling till spelet
+
+Tungt focus på re-connect, om en användare tappar uppkoppling, laddar om sidan, etc, så får användaren upplevelsen som att ingenting hände.

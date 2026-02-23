@@ -1,6 +1,7 @@
 package com.hittrivia.app.game;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -22,6 +23,14 @@ import tools.jackson.databind.ObjectMapper;
 public class Game {
     private String id;
     private List<String> players;
+
+    public record GuessResult(int round, String guess, int titleScore, int artistScore, int albumScore) {
+        public int total() { return titleScore + artistScore + albumScore; } 
+    }
+    
+    private Map<String,String> playerNames;
+    private Map<String, List<GuessResult>> playerGuesses = new HashMap<>();
+
     private String admin;
     private Quizz quizz;
     private List<Track> tracks;
@@ -56,6 +65,45 @@ public class Game {
 
     public Quizz getQuizz() {
         return this.quizz;
+    }
+
+    /**
+     * Checks the player's guess against the current track.
+     * Returns a GuessResult with per-field scores, or null if the guess is rejected
+     * (e.g. already guessed this round, no current track, blank input).
+     */
+    public GuessResult checkGuess(String playerId, String guess) {
+        Track track = getCurrentTrack();
+        if (track == null || guess == null) return null;
+
+        String normalizedGuess = guess.toLowerCase().trim();
+        if (normalizedGuess.isBlank()) return null;
+
+        // Prevent duplicate guesses for the same round
+        List<GuessResult> guesses = playerGuesses.computeIfAbsent(playerId, k -> new ArrayList<>());
+        if (guesses.stream().anyMatch(g -> g.round() == currentRound)) return null;
+
+        String title = track.title().toLowerCase().trim();
+        String artist = track.artist().toLowerCase().trim();
+        String album = track.album().toLowerCase().trim();
+
+        int titleScore  = (!title.isEmpty()  && normalizedGuess.contains(title))  ? 1 : 0;
+        int artistScore = (!artist.isEmpty() && normalizedGuess.contains(artist)) ? 1 : 0;
+        int albumScore  = (!album.isEmpty()  && normalizedGuess.contains(album))  ? 1 : 0;
+
+        GuessResult result = new GuessResult(currentRound, guess, titleScore, artistScore, albumScore);
+        guesses.add(result);
+
+        return result;
+    }
+
+    /**
+     * Returns the total score for a player across all rounds.
+     */
+    public int getPlayerScore(String playerId) {
+        return playerGuesses.getOrDefault(playerId, List.of()).stream()
+                .mapToInt(GuessResult::total)
+                .sum();
     }
 
     // This also starts the game...
@@ -179,7 +227,7 @@ public class Game {
 
     public static class PhaseDelays {
         private static final int MUSIC_DELAY = 15;
-        private static final int GUESS_DELAY = 3;
+        private static final int GUESS_DELAY = 15;
         private static final int REVEAL_DELAY = 15;
         private static final int WAIT_DELAY = 3;
 

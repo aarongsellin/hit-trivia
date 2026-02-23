@@ -70,6 +70,7 @@
       v-else-if="gameState === 'REVEAL'"
       :track="currentTrack"
       :musicDuration="musicDuration"
+      :guessResult="guessResult"
     />
 
     <FinishedPhase
@@ -156,6 +157,9 @@ export default {
       musicDuration: 0, // How long the music played for
       musicPhaseStartTime: null, // When PLAYING_MUSIC phase started
       preloadedVideoUrl: null, // Currently preloaded video URL
+
+      // Guess result for the current round
+      guessResult: null,
     };
   },
   created: function () {
@@ -338,8 +342,14 @@ export default {
                 this.tracks = element;
                 console.log('Received tracks:', element);
                 break;
+              case 'guessResult':
+                this.guessResult = element;
+                console.log('Guess result:', element);
+                break;
               case 'currentRound':
                 this.currentRound = element;
+                // Reset guess result for the new round
+                this.guessResult = null;
                 if (this.tracks && this.tracks[element]) {
                   this.currentTrack = this.tracks[element];
                   console.log('Current track:', this.currentTrack);
