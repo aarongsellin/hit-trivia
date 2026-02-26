@@ -58,6 +58,24 @@
           </div>
         </div>
 
+        <div class="config-group">
+          <label>Rounds</label>
+          <div class="obscurity-slider">
+            <input
+              :value="selectedRounds"
+              @input="$emit('update:rounds', Number($event.target.value))"
+              type="range"
+              min="1"
+              max="10"
+              class="slider"
+            />
+            <span class="obscurity-label"
+              >{{ selectedRounds }}
+              {{ selectedRounds === 1 ? 'round' : 'rounds' }}</span
+            >
+          </div>
+        </div>
+
         <button @click="handleStart" class="start-btn">Start Game</button>
       </div>
 
@@ -90,6 +108,7 @@ export default {
     selectedGenre: String,
     selectedDecade: String,
     selectedObscurity: Number,
+    selectedRounds: Number,
     gameUrl: {
       type: String,
       default: '',
@@ -99,7 +118,13 @@ export default {
       default: null,
     },
   },
-  emits: ['update:genre', 'update:decade', 'update:obscurity', 'start-game'],
+  emits: [
+    'update:genre',
+    'update:decade',
+    'update:obscurity',
+    'update:rounds',
+    'start-game',
+  ],
   data() {
     return {
       genres: ['Pop', 'Rock', 'Hip-Hop', 'Country', 'Electronic', 'Jazz'],

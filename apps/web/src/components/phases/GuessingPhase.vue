@@ -1,19 +1,28 @@
 <template>
   <div class="guessing-phase">
     <div class="guessing-container">
-      <h2>Make Your Guess!</h2>
-      <div class="input-group">
+      <h2>{{ submitted ? 'Guess Locked In' : "What's the song?" }}</h2>
+
+      <div
+        class="input-wrapper"
+        :class="{ 'input-wrapper--locked': submitted }"
+      >
+        <div v-if="submitted" class="lock-icon">✓</div>
         <input
+          ref="guessInput"
           v-model="guess"
           @keyup.enter="submitGuess"
           type="text"
-          placeholder="Enter song title or artist..."
+          :placeholder="submitted ? '' : 'Song title, artist, or album...'"
           class="guess-input"
+          :class="{ 'guess-input--locked': submitted }"
+          :readonly="submitted"
           autofocus
         />
-        <button @click="submitGuess" class="submit-btn">Submit</button>
       </div>
-      <p class="hint">Type your answer and press Enter or Submit</p>
+
+      <p class="hint" v-if="!submitted">Press Enter to lock in your guess</p>
+      <p class="hint hint--locked" v-else>Waiting for reveal...</p>
     </div>
   </div>
 </template>
@@ -21,16 +30,43 @@
 <script>
 export default {
   name: 'GuessingPhase',
+  props: {
+    gameId: {
+      type: String,
+      default: null,
+    },
+    currentRound: {
+      type: Number,
+      default: 0,
+    },
+  },
   data() {
     return {
       guess: '',
+      submitted: false,
     };
+  },
+  computed: {
+    storageKey() {
+      return `guess_${this.gameId}_${this.currentRound}`;
+    },
+  },
+  mounted() {
+    // Restore guess from localStorage on reload
+    const saved = localStorage.getItem(this.storageKey);
+    if (saved) {
+      this.guess = saved;
+      this.submitted = true;
+    } else {
+      this.$refs.guessInput?.focus();
+    }
   },
   methods: {
     submitGuess() {
-      if (this.guess.trim()) {
+      if (this.guess.trim() && !this.submitted) {
+        this.submitted = true;
+        localStorage.setItem(this.storageKey, this.guess.trim());
         this.$emit('submit-guess', this.guess.trim());
-        this.guess = '';
       }
     },
   },
@@ -52,55 +88,94 @@ export default {
   border: 1px solid #ddd;
   text-align: center;
   width: 100%;
-  max-width: 600px;
+  max-width: 560px;
 }
 
 .guessing-container h2 {
-  margin: 0 0 24px 0;
-  color: #333;
-  font-size: 26px;
+  margin: 0 0 28px 0;
+  color: #1a1a1a;
+  font-size: 24px;
+  font-weight: 700;
 }
 
-.input-group {
+.input-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.input-wrapper--locked {
+  background: #f0fdf4;
+  border-radius: 12px;
+}
+
+.lock-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: #22c55e;
+  color: white;
+  border-radius: 50%;
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 1;
 }
 
 .guess-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border-color 0.2s;
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #1a1a1a;
+  background: #fafafa;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.guess-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 .guess-input:focus {
   outline: none;
-  border-color: #2196f3;
+  border-color: #1a1a1a;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
 }
 
-.submit-btn {
-  padding: 12px 28px;
-  background: #000;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease;
+.guess-input--locked {
+  border-color: #22c55e;
+  background: transparent;
+  color: #166534;
+  padding-left: 48px;
+  text-align: left;
+  cursor: default;
 }
 
-.submit-btn:hover {
-  background: #333;
+.guess-input--locked:focus {
+  border-color: #22c55e;
+  box-shadow: none;
 }
 
 .hint {
   font-size: 14px;
-  color: #999;
+  color: #9ca3af;
   margin: 0;
+}
+
+.hint--locked {
+  color: #22c55e;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
@@ -108,12 +183,13 @@ export default {
     padding: 30px 20px;
   }
 
-  .input-group {
-    flex-direction: column;
+  .guess-input {
+    font-size: 16px;
+    padding: 14px 16px;
   }
 
-  .submit-btn {
-    width: 100%;
+  .guess-input--locked {
+    padding-left: 44px;
   }
 }
 </style>

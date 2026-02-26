@@ -14,8 +14,8 @@ public class Quizz {
     private List<Track> tracks = new ArrayList<>();
     private int currentTrack = 0;
 
-    private static final int DEFAULT_TRACK_COUNT = 5;
-    private static final String DEFAULT_STOREFRONT = "us";
+    private static final int DEFAULT_TRACK_COUNT = 1;
+    private static final String DEFAULT_STOREFRONT = "se";
 
     public boolean loadTracks(JsonNode configuration, AppleMusicCatalogService catalogService) {
         System.out.println("Quizz load tracks with configuration: " + configuration);

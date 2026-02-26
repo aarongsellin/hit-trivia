@@ -9,17 +9,24 @@
         :src="track?.previewUrl"
         autoplay
         @error="onAudioError"
-        @playing="isPlaying = true"
+        @playing="onPlaying"
         @ended="isPlaying = false"
       ></audio>
 
-      <div class="music-visualizer" :class="{ playing: isPlaying }">
+      <!-- Tap-to-play overlay when autoplay is blocked (e.g. after page reload) -->
+      <button
+        v-if="autoplayBlocked"
+        class="tap-to-play"
+        @click="resumePlayback"
+      >
+        <span class="tap-icon">▶</span>
+        <span>Tap to play music</span>
+      </button>
+
+      <div v-else class="music-visualizer" :class="{ playing: isPlaying }">
         <div class="bar" v-for="i in 8" :key="i"></div>
       </div>
       <p class="instruction">Guess the song...</p>
-      <p v-if="audioError" class="audio-error">
-        ⚠️ Could not play audio preview
-      </p>
     </div>
   </div>
 </template>
@@ -37,6 +44,7 @@ export default {
     return {
       isPlaying: false,
       audioError: false,
+      autoplayBlocked: false,
     };
   },
   watch: {
@@ -44,15 +52,9 @@ export default {
       handler(newTrack) {
         if (newTrack?.previewUrl) {
           this.audioError = false;
+          this.autoplayBlocked = false;
           this.$nextTick(() => {
-            const audio = this.$refs.audioPlayer;
-            if (audio) {
-              audio.load();
-              audio.play().catch((err) => {
-                console.error('Audio playback failed:', err);
-                this.audioError = true;
-              });
-            }
+            this.tryPlay();
           });
         }
       },
@@ -67,6 +69,36 @@ export default {
     }
   },
   methods: {
+    tryPlay() {
+      const audio = this.$refs.audioPlayer;
+      if (!audio) return;
+      audio.load();
+      audio.play().catch((err) => {
+        if (err.name === 'NotAllowedError') {
+          // Browser blocked autoplay — show tap-to-play button
+          this.autoplayBlocked = true;
+        } else {
+          console.error('Audio playback failed:', err);
+          this.audioError = true;
+        }
+      });
+    },
+    resumePlayback() {
+      this.autoplayBlocked = false;
+      this.$nextTick(() => {
+        const audio = this.$refs.audioPlayer;
+        if (audio) {
+          audio.play().catch((err) => {
+            console.error('Audio playback failed after tap:', err);
+            this.audioError = true;
+          });
+        }
+      });
+    },
+    onPlaying() {
+      this.isPlaying = true;
+      this.autoplayBlocked = false;
+    },
     onAudioError(e) {
       console.error('Audio error:', e);
       this.audioError = true;
@@ -162,6 +194,33 @@ audio {
   font-size: 16px;
   color: #666;
   margin: 0;
+}
+
+.tap-to-play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 40px;
+  margin-bottom: 32px;
+  background: #f5f5f5;
+  border: 2px dashed #bbb;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.tap-to-play:hover {
+  background: #e8f4fd;
+  border-color: #2196f3;
+  color: #1976d2;
+}
+
+.tap-icon {
+  font-size: 36px;
+  line-height: 1;
 }
 
 .audio-error {

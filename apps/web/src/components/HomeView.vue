@@ -177,7 +177,7 @@
     </section>
 
     <footer class="footer">
-      <p>Built with ♫ &mdash; Hit Trivia</p>
+      <p>Built with love &dash; Hit Trivia</p>
       <p class="footer-apple">
         Apple Music and the Apple Music logo are trademarks of Apple Inc.
       </p>

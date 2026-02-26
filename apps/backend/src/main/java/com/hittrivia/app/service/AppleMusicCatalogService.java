@@ -189,33 +189,57 @@ public class AppleMusicCatalogService {
 
     /**
      * Search for a music video preview URL for a given song.
-     * Returns the HLS or direct preview URL, or null if not found.
+     * Returns the direct preview URL, or null if not found or no confident match.
      */
     private String findMusicVideoPreview(String title, String artist, String storefront) {
         try {
             String query = URLEncoder.encode(title + " " + artist, StandardCharsets.UTF_8);
-            String url = String.format("%s/%s/search?term=%s&types=music-videos&limit=1",
+            String url = String.format("%s/%s/search?term=%s&types=music-videos&limit=5",
                     BASE_URL, storefront, query);
 
             JsonNode root = makeRequest(url);
             JsonNode videosData = root.path("results").path("music-videos").path("data");
 
-            if (videosData.isArray() && videosData.size() > 0) {
-                JsonNode video = videosData.get(0);
-                JsonNode attrs = video.path("attributes");
-                JsonNode previews = attrs.path("previews");
+            if (videosData.isArray()) {
+                String normalizedTitle = normalizeForMatch(title);
+                String normalizedArtist = normalizeForMatch(artist);
 
-                if (previews.isArray() && previews.size() > 0) {
-                    // Prefer hlsUrl for video playback, fall back to url
-                    String hlsUrl = previews.get(0).path("hlsUrl").asText("");
-                    if (!hlsUrl.isEmpty()) return hlsUrl;
-                    return previews.get(0).path("url").asText("");
+                for (JsonNode video : videosData) {
+                    JsonNode attrs = video.path("attributes");
+                    String videoTitle = normalizeForMatch(attrs.path("name").asText(""));
+                    String videoArtist = normalizeForMatch(attrs.path("artistName").asText(""));
+
+                    // Verify the result actually matches our song
+                    boolean titleMatch = videoTitle.contains(normalizedTitle) || normalizedTitle.contains(videoTitle);
+                    boolean artistMatch = videoArtist.contains(normalizedArtist) || normalizedArtist.contains(videoArtist);
+
+                    if (titleMatch && artistMatch) {
+                        JsonNode previews = attrs.path("previews");
+                        if (previews.isArray() && previews.size() > 0) {
+                            // Prefer direct url (mp4) over hlsUrl since HLS (.m3u8) doesn't
+                            // play in a plain <video> tag on non-Safari browsers
+                            String directUrl = previews.get(0).path("url").asText("");
+                            if (!directUrl.isEmpty()) return directUrl;
+                            String hlsUrl = previews.get(0).path("hlsUrl").asText("");
+                            if (!hlsUrl.isEmpty()) return hlsUrl;
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
             log.warn("Failed to find music video for '{}' by '{}': {}", title, artist, e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Normalize a string for loose matching: lowercase, strip accents and non-alphanumeric chars.
+     */
+    private String normalizeForMatch(String s) {
+        if (s == null) return "";
+        String decomposed = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return decomposed.toLowerCase().replaceAll("[^a-z0-9 ]", "").replaceAll("\\s+", " ").trim();
     }
 
     /**

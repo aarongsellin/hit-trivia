@@ -25,21 +25,59 @@
     </div>
     -->
 
+    <!-- Blocked from joining -->
+    <div v-if="joinBlocked" class="name-entry-phase">
+      <div class="name-entry-container">
+        <div class="name-entry-icon">🚫</div>
+        <h2>Can't join</h2>
+        <p class="name-entry-subtitle">{{ joinBlockedMessage }}</p>
+        <a href="/"><button class="name-submit-btn">Back to Home</button></a>
+      </div>
+    </div>
+
+    <!-- Name Entry Screen -->
+    <div v-else-if="!playerName" class="name-entry-phase">
+      <div class="name-entry-container">
+        <div class="name-entry-icon">♫</div>
+        <h2>Join the game</h2>
+        <p class="name-entry-subtitle">Enter your name to get started</p>
+        <input
+          ref="nameInput"
+          v-model="nameInput"
+          @keyup.enter="submitName"
+          type="text"
+          placeholder="Your name..."
+          class="name-input"
+          maxlength="20"
+          autofocus
+        />
+        <button
+          @click="submitName"
+          class="name-submit-btn"
+          :disabled="!nameInput.trim()"
+        >
+          Join Game
+        </button>
+      </div>
+    </div>
+
     <!-- Phase Components -->
     <ConfigPhase
-      v-if="gameState === 'WAITING_CONFIG' && isAdmin"
+      v-if="playerName && gameState === 'WAITING_CONFIG' && isAdmin"
       :selectedGenre="selectedGenre"
       :selectedDecade="selectedDecade"
       :selectedObscurity="selectedObscurity"
+      :selectedRounds="selectedRounds"
       :gameUrl="gameUrl"
       @update:genre="selectedGenre = $event"
       @update:decade="selectedDecade = $event"
       @update:obscurity="selectedObscurity = $event"
+      @update:rounds="selectedRounds = $event"
       @start-game="startGame"
     />
 
     <WaitingConfigPhase
-      v-else-if="gameState === 'WAITING_CONFIG' && !isAdmin"
+      v-else-if="playerName && gameState === 'WAITING_CONFIG' && !isAdmin"
     />
 
     <WaitingPhase v-else-if="gameState === 'WAITING'" />
@@ -51,6 +89,8 @@
 
     <GuessingPhase
       v-else-if="gameState === 'GUESSING'"
+      :game-id="gameId"
+      :current-round="currentRound"
       @submit-guess="handleGuessSubmit"
     />
 
@@ -75,6 +115,8 @@
 
     <FinishedPhase
       v-else-if="gameState === 'FINISHED'"
+      :finalScores="finalScores"
+      :playerId="playerId"
       @play-again="handlePlayAgain"
     />
 
@@ -98,7 +140,7 @@
 </template>
 
 <script>
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useWebSocket } from '@vueuse/core';
 import ConfigPhase from './phases/ConfigPhase.vue';
 import WaitingConfigPhase from './phases/WaitingConfigPhase.vue';
@@ -132,6 +174,8 @@ export default {
       messages: [],
       inputMessage: '',
       playerId: localStorage.getItem('playerId') || null,
+      playerName: localStorage.getItem('playerName') || null,
+      nameInput: localStorage.getItem('playerName') || '',
       isAdmin: null,
       socket: null,
       gameState: null,
@@ -149,6 +193,7 @@ export default {
       selectedGenre: 'Pop',
       selectedDecade: '2000s',
       selectedObscurity: 3,
+      selectedRounds: 5,
 
       // Tracks and current track
       tracks: [],
@@ -160,6 +205,13 @@ export default {
 
       // Guess result for the current round
       guessResult: null,
+
+      // Final scores for the finished phase
+      finalScores: null,
+
+      // Whether the player was blocked from joining
+      joinBlocked: false,
+      joinBlockedMessage: '',
     };
   },
   created: function () {
@@ -169,13 +221,17 @@ export default {
     );
 
     const route = useRoute();
+    this.router = useRouter();
     this.gameId = route.query.id;
     this.gameUrl = `${window.location.origin}?id=${this.gameId}`;
 
     this.socket = useWebSocket(`ws://${apiUrl}/ws/game/${this.gameId}`, {
       autoReconnect: true,
       onConnected: () => {
-        this.handlePlayerJoin();
+        // Only auto-join if we already have a name (e.g. reconnect/refresh)
+        if (this.playerName) {
+          this.handlePlayerJoin();
+        }
       },
     });
 
@@ -193,10 +249,18 @@ export default {
       this.isAdmin = false;
       this.gameState = null;
     },
+    submitName() {
+      const name = this.nameInput.trim();
+      if (!name) return;
+      this.playerName = name;
+      localStorage.setItem('playerName', name);
+      this.handlePlayerJoin();
+    },
     handlePlayerJoin() {
       const toSend = JSON.stringify({
         type: 'data',
         playerId: localStorage.getItem('playerId') || null,
+        playerName: this.playerName,
       });
 
       this.socket.send(toSend);
@@ -214,6 +278,7 @@ export default {
         genre: this.selectedGenre,
         decade: this.selectedDecade,
         obscurity: this.selectedObscurity,
+        trackCount: this.selectedRounds,
       };
 
       const toSend = JSON.stringify({
@@ -237,28 +302,34 @@ export default {
       console.log('Play again clicked');
       // Reset game or navigate back to lobby
     },
-    startPhaseCountdown(newPhase, endTimestamp) {
+    startPhaseCountdown(newPhase, startTimestamp, endTimestamp) {
       // Clear any existing interval
       if (this.progressInterval) {
         clearInterval(this.progressInterval);
       }
 
-      // Set times
-      this.phaseStartTime = Date.now();
+      // Use the server's original start time to calculate total duration
+      // so the bar shows the correct proportion even after a page reload
+      this.phaseStartTime = startTimestamp;
       this.phaseEndTime = endTimestamp;
 
-      const totalDuration = endTimestamp - this.phaseStartTime;
+      const totalDuration = endTimestamp - startTimestamp;
+
+      // Start at the correct remaining percentage
+      const now = Date.now();
+      const remaining = endTimestamp - now;
+      this.progressPercentage = Math.max((remaining / totalDuration) * 100, 0);
 
       // Update progress every 50ms for smooth animation
       this.progressInterval = setInterval(() => {
         const now = Date.now();
-        const elapsed = now - this.phaseStartTime;
-        const percentage = Math.min((elapsed / totalDuration) * 100, 100);
+        const remaining = endTimestamp - now;
+        const percentage = Math.max((remaining / totalDuration) * 100, 0);
 
         this.progressPercentage = percentage;
 
         // When complete, clear interval and trigger phase change
-        if (percentage >= 100) {
+        if (percentage <= 0) {
           clearInterval(this.progressInterval);
           this.handlePhaseChange(newPhase);
         }
@@ -306,6 +377,11 @@ export default {
                 break;
               case 'gameState':
                 this.gameState = element;
+                // On reconnect during PLAYING_MUSIC, set the start time so
+                // music duration tracking works when the phase transitions
+                if (element === 'PLAYING_MUSIC' && !this.musicPhaseStartTime) {
+                  this.musicPhaseStartTime = Date.now();
+                }
                 break;
               case 'phase': {
                 const newPhase = element.newPhase;
@@ -314,7 +390,14 @@ export default {
                 // Track when PLAYING_MUSIC phase starts
                 if (newPhase === 'PLAYING_MUSIC') {
                   this.musicPhaseStartTime = Date.now();
+                  this.guessResult = null;
                   this.preloadVideo();
+                  // Clean up guess from previous round
+                  if (this.currentRound > 0) {
+                    localStorage.removeItem(
+                      `guess_${this.gameId}_${this.currentRound - 1}`
+                    );
+                  }
                 }
                 // Calculate music duration when leaving PLAYING_MUSIC phase
                 else if (
@@ -335,21 +418,40 @@ export default {
               case 'phaseChange':
                 this.startPhaseCountdown(
                   element.newPhase,
+                  element.startTimestamp,
                   element.endTimestamp
                 );
                 break;
               case 'tracks':
                 this.tracks = element;
                 console.log('Received tracks:', element);
+                // If currentRound is already set (e.g. reconnect), resolve currentTrack now
+                if (
+                  this.tracks &&
+                  this.tracks[this.currentRound] &&
+                  !this.currentTrack
+                ) {
+                  this.currentTrack = this.tracks[this.currentRound];
+                  console.log(
+                    'Resolved current track from tracks arrival:',
+                    this.currentTrack
+                  );
+                }
                 break;
               case 'guessResult':
                 this.guessResult = element;
                 console.log('Guess result:', element);
                 break;
+              case 'finalScores':
+                this.finalScores = element;
+                // Clean up the last round's guess from localStorage
+                localStorage.removeItem(
+                  `guess_${this.gameId}_${this.currentRound}`
+                );
+                console.log('Final scores:', element);
+                break;
               case 'currentRound':
                 this.currentRound = element;
-                // Reset guess result for the new round
-                this.guessResult = null;
                 if (this.tracks && this.tracks[element]) {
                   this.currentTrack = this.tracks[element];
                   console.log('Current track:', this.currentTrack);
@@ -362,7 +464,18 @@ export default {
         }
 
         if (type === 'error') {
-          console.log('received error');
+          console.log('received error:', parsed);
+          if (parsed?.code === 'GAME_ALREADY_STARTED') {
+            this.joinBlocked = true;
+            this.joinBlockedMessage =
+              parsed?.message || 'This game has already started.';
+          } else if (
+            parsed?.message &&
+            parsed.message.includes('does not exist')
+          ) {
+            // Invalid game ID — redirect home
+            this.router.replace('/');
+          }
         }
       }
     },
@@ -512,5 +625,104 @@ export default {
   .game-container {
     padding: 10px;
   }
+
+  .name-entry-container {
+    padding: 32px 20px;
+  }
+
+  .name-input {
+    font-size: 16px;
+    padding: 14px 16px;
+  }
+}
+
+/* ─── Name Entry ───────────────────────────────── */
+
+.name-entry-phase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.name-entry-container {
+  background: white;
+  padding: 48px 56px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+}
+
+.name-entry-icon {
+  font-size: 36px;
+  color: #e11d48;
+  margin-bottom: 8px;
+}
+
+.name-entry-container h2 {
+  margin: 0 0 8px 0;
+  color: #1a1a1a;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.name-entry-subtitle {
+  color: #9ca3af;
+  font-size: 15px;
+  margin: 0 0 28px 0;
+}
+
+.name-input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: center;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.name-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.name-submit-btn {
+  width: 100%;
+  padding: 14px 28px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.name-submit-btn:hover:not(:disabled) {
+  background: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.name-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

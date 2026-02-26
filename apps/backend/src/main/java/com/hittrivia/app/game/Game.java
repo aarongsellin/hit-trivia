@@ -43,6 +43,11 @@ public class Game {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> currentTask;
 
+    // Tracks the active timer so reconnecting players can get remaining time
+    private long phaseStartTimestamp = 0;
+    private long phaseEndTimestamp = 0;
+    private Phase nextPhase = null;
+
     private BiConsumer<MessageType, Map<String, Object>> messageBroadcaster;
     private Consumer<Phase> phaseChangeCallback;
 
@@ -55,8 +60,17 @@ public class Game {
     public Game(String gameId) {
         this.id = gameId;
         this.players = new ArrayList<>();
+        this.playerNames = new HashMap<>();
         this.admin = null;
         this.quizz = new Quizz();
+    }
+
+    public void setPlayerName(String playerId, String name) {
+        playerNames.put(playerId, name);
+    }
+
+    public String getPlayerName(String playerId) {
+        return playerNames.getOrDefault(playerId, "Player");
     }
 
     public void setCatalogService(AppleMusicCatalogService catalogService) {
@@ -68,6 +82,28 @@ public class Game {
     }
 
     /**
+     * Normalizes a string for fuzzy comparison: lowercases, strips accents,
+     * removes all non-alphanumeric characters, and collapses whitespace.
+     */
+    private String normalize(String s) {
+        if (s == null) return "";
+        // Decompose accented characters, strip combining marks
+        String decomposed = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        // Remove everything except letters, digits, and spaces, then collapse whitespace
+        return decomposed.toLowerCase().replaceAll("[^a-z0-9 ]", "").replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * Checks whether two strings are a fuzzy match.
+     * Returns true if either contains the other (after normalization).
+     */
+    private boolean fuzzyContains(String guess, String answer) {
+        if (guess.isEmpty() || answer.isEmpty()) return false;
+        return guess.contains(answer) || answer.contains(guess);
+    }
+
+    /**
      * Checks the player's guess against the current track.
      * Returns a GuessResult with per-field scores, or null if the guess is rejected
      * (e.g. already guessed this round, no current track, blank input).
@@ -76,20 +112,20 @@ public class Game {
         Track track = getCurrentTrack();
         if (track == null || guess == null) return null;
 
-        String normalizedGuess = guess.toLowerCase().trim();
+        String normalizedGuess = normalize(guess);
         if (normalizedGuess.isBlank()) return null;
 
         // Prevent duplicate guesses for the same round
         List<GuessResult> guesses = playerGuesses.computeIfAbsent(playerId, k -> new ArrayList<>());
         if (guesses.stream().anyMatch(g -> g.round() == currentRound)) return null;
 
-        String title = track.title().toLowerCase().trim();
-        String artist = track.artist().toLowerCase().trim();
-        String album = track.album().toLowerCase().trim();
+        String title  = normalize(track.title());
+        String artist = normalize(track.artist());
+        String album  = normalize(track.album());
 
-        int titleScore  = (!title.isEmpty()  && normalizedGuess.contains(title))  ? 1 : 0;
-        int artistScore = (!artist.isEmpty() && normalizedGuess.contains(artist)) ? 1 : 0;
-        int albumScore  = (!album.isEmpty()  && normalizedGuess.contains(album))  ? 1 : 0;
+        int titleScore  = fuzzyContains(normalizedGuess, title)  ? 1 : 0;
+        int artistScore = fuzzyContains(normalizedGuess, artist) ? 1 : 0;
+        int albumScore  = fuzzyContains(normalizedGuess, album)  ? 1 : 0;
 
         GuessResult result = new GuessResult(currentRound, guess, titleScore, artistScore, albumScore);
         guesses.add(result);
@@ -136,13 +172,23 @@ public class Game {
             currentTask.cancel(false);
         }
 
+        long startTimestamp = System.currentTimeMillis();
+        long endTimestamp = startTimestamp + (durationSeconds * 1000);
+        this.phaseStartTimestamp = startTimestamp;
+        this.phaseEndTimestamp = endTimestamp;
+        this.nextPhase = newPhase;
+
         broadcastMessage(MessageType.DATA, Map.of(
             "phaseChange", Map.of(
                 "newPhase", newPhase.toString(),
-                "endTimestamp", System.currentTimeMillis() + (durationSeconds * 1000))
+                "startTimestamp", startTimestamp,
+                "endTimestamp", endTimestamp)
         ));
 
         currentTask = scheduler.schedule(() -> {
+            this.phaseStartTimestamp = 0;
+            this.phaseEndTimestamp = 0;
+            this.nextPhase = null;
             this.phase = newPhase;
             // Broadcast that we're now in this phase
             broadcastMessage(MessageType.DATA, Map.of("phase", Map.of("newPhase", newPhase.toString())));
@@ -179,6 +225,7 @@ public class Game {
                 }
                 break;
             case FINISHED:
+                broadcastFinalScores();
                 cleanup();
                 break;
         }
@@ -199,6 +246,48 @@ public class Game {
     private void cleanup() {
         shutdown();
         // Additional cleanup logic
+    }
+
+    /**
+     * Builds and broadcasts the final scoreboard to all players.
+     * Each entry contains playerId, rank, and total score.
+     */
+    private void broadcastFinalScores() {
+        int totalRounds = quizz.getTracks() != null ? quizz.getTracks().size() : 0;
+        int maxScore = totalRounds * 3; // 3 points per round (title + artist + album)
+
+        // Build score entry for every player, sorted by score descending
+        List<Map<String, Object>> scoreboard = players.stream()
+                .map(pid -> {
+                    int score = getPlayerScore(pid);
+                    return Map.<String, Object>of(
+                            "playerId", pid,
+                            "name", getPlayerName(pid),
+                            "score", score
+                    );
+                })
+                .sorted((a, b) -> Integer.compare((int) b.get("score"), (int) a.get("score")))
+                .collect(java.util.stream.Collectors.toList());
+
+        // Assign ranks (1-based, tied scores get the same rank)
+        List<Map<String, Object>> ranked = new ArrayList<>();
+        int rank = 1;
+        for (int i = 0; i < scoreboard.size(); i++) {
+            if (i > 0 && !scoreboard.get(i).get("score").equals(scoreboard.get(i - 1).get("score"))) {
+                rank = i + 1;
+            }
+            Map<String, Object> entry = new HashMap<>(scoreboard.get(i));
+            entry.put("rank", rank);
+            ranked.add(entry);
+        }
+
+        broadcastMessage(MessageType.DATA, Map.of(
+                "finalScores", Map.of(
+                        "scoreboard", ranked,
+                        "maxScore", maxScore,
+                        "totalRounds", totalRounds
+                )
+        ));
     }
 
     public void setMessageBroadcaster(BiConsumer<MessageType, Map<String, Object>> broadcaster) {
@@ -248,6 +337,14 @@ public class Game {
 
     public boolean isPlayer(String playerId) {
         return players.contains(playerId);
+    }
+
+    /**
+     * Returns true if the game is still accepting new players.
+     * Only allows joining during the WAITING_CONFIG phase (lobby).
+     */
+    public boolean isJoinable() {
+        return phase == Phase.WAITING_CONFIG;
     }
 
     public void removePlayer(String playerId) {

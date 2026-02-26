@@ -127,6 +127,10 @@ public class GameSocketHandler extends TextWebSocketHandler {
             case "playerId":
                 handlePlayerJoin(gameSession, value.asText(null));
                 break;
+            case "playerName":
+                // Stored on the session attribute, picked up by handlePlayerJoin
+                gameSession.getSession().getAttributes().put("playerName", value.asText("Player"));
+                break;
             case "configuration":
                 handleConfiguration(gameSession, value);
                 break;
@@ -234,11 +238,29 @@ public class GameSocketHandler extends TextWebSocketHandler {
             // Re-assign the session to the player
             session.getSession().getAttributes().put("playerId", playerId);
 
+            // Update player name if provided
+            String rejoinName = (String) session.getSession().getAttributes().get("playerName");
+            if (rejoinName != null) {
+                game.setPlayerName(playerId, rejoinName);
+            }
+
             // Tell the user they have rejoined successfully.
             try {
                 session.sendJsonMessage(MessageType.DATA, Map.of("gameState", game.getPhase()));
                 System.out.println("User has rejoined game, sending tracks: " + game.getQuizz().getTracks());
                 session.sendJsonMessage(MessageType.DATA, Map.of("tracks", game.getQuizz().getTracks()));
+                session.sendJsonMessage(MessageType.DATA, Map.of("currentRound", game.getCurrentRound()));
+
+                // If there's an active phase timer, send it so the client can restore the progress bar
+                if (game.getPhaseEndTimestamp() > System.currentTimeMillis() && game.getNextPhase() != null) {
+                    session.sendJsonMessage(MessageType.DATA, Map.of(
+                        "phaseChange", Map.of(
+                            "newPhase", game.getNextPhase().toString(),
+                            "startTimestamp", game.getPhaseStartTimestamp(),
+                            "endTimestamp", game.getPhaseEndTimestamp()
+                        )
+                    ));
+                }
 
                 if (Objects.equals(game.getAdmin(), session.getPlayerId())) {
                     session.sendJsonMessage(MessageType.DATA, Map.of(GamePayloadType.admin, true));
@@ -250,11 +272,31 @@ public class GameSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        System.out.println("New player has joined game");
+        System.out.println("New player wants to join game");
+
+        // Block new players if the game has already started or finished
+        if (!game.isJoinable()) {
+            try {
+                session.sendJsonMessage(MessageType.ERROR, Map.of(
+                    "message", "This game has already started.",
+                    "code", "GAME_ALREADY_STARTED"
+                ));
+                session.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
 
         // This means its a new player that wants to join the game.
         String newPlayerId = createPlayerId();
         session.getSession().getAttributes().put("playerId", newPlayerId);
+
+        // Store the player's display name
+        String playerName = (String) session.getSession().getAttributes().get("playerName");
+        if (playerName != null) {
+            game.setPlayerName(newPlayerId, playerName);
+        }
 
         try {
             game.addPlayer(newPlayerId);
