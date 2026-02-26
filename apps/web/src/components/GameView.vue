@@ -85,6 +85,7 @@
     <PlayingMusicPhase
       v-else-if="gameState === 'PLAYING_MUSIC'"
       :track="currentTrack"
+      :seek-offset="musicSeekOffset"
     />
 
     <GuessingPhase
@@ -215,27 +216,47 @@ export default {
     };
   },
   created: function () {
-    const apiUrl = process.env.VUE_APP_API_URL.replace('http://', '').replace(
-      'https://',
-      ''
-    );
+    // In production (same-origin), use window.location.host.
+    // In dev, VUE_APP_API_URL points to the backend dev server.
+    const envUrl = process.env.VUE_APP_API_URL;
+    let wsHost;
+    let wsProtocol;
+    if (envUrl) {
+      wsHost = envUrl.replace(/^https?:\/\//, '');
+      wsProtocol = 'ws';
+    } else {
+      wsHost = window.location.host;
+      wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    }
 
     const route = useRoute();
     this.router = useRouter();
     this.gameId = route.query.id;
     this.gameUrl = `${window.location.origin}?id=${this.gameId}`;
 
-    this.socket = useWebSocket(`ws://${apiUrl}/ws/game/${this.gameId}`, {
-      autoReconnect: true,
-      onConnected: () => {
-        // Only auto-join if we already have a name (e.g. reconnect/refresh)
-        if (this.playerName) {
-          this.handlePlayerJoin();
-        }
-      },
-    });
+    this.socket = useWebSocket(
+      `${wsProtocol}://${wsHost}/ws/game/${this.gameId}`,
+      {
+        autoReconnect: true,
+        onConnected: () => {
+          // Only auto-join if we already have a name (e.g. reconnect/refresh)
+          if (this.playerName) {
+            this.handlePlayerJoin();
+          }
+        },
+      }
+    );
 
     this.socket.open();
+  },
+  computed: {
+    musicSeekOffset() {
+      // Seconds elapsed since the PLAYING_MUSIC phase started (for reconnect seek)
+      if (this.phaseStartTime && this.gameState === 'PLAYING_MUSIC') {
+        return Math.max(0, (Date.now() - this.phaseStartTime) / 1000);
+      }
+      return 0;
+    },
   },
   watch: {
     'socket.data': function () {

@@ -198,7 +198,7 @@ export default {
   data() {
     return {
       totalGameCount: 0,
-      apiUrl: process.env.VUE_APP_API_URL,
+      apiUrl: process.env.VUE_APP_API_URL || '',
       affiliateToken: process.env.VUE_APP_APPLE_AFFILIATE_TOKEN || '',
       isLoading: false,
       steps: [

@@ -2,6 +2,7 @@
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/config/SecurityConfig.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/config/WebSocketConfig.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/controllers/HTTPController.java
+/Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/controllers/SpaController.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/dto/ErrorResponse.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/dto/GameCountResponse.java
 /Users/aarongotthardssonsellin/Github/hit-trivia/apps/backend/src/main/java/com/hittrivia/app/dto/GamePayloadType.java

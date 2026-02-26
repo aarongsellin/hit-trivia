@@ -1,5 +1,5 @@
 <template>
-  <div class="music-phase">
+  <div class="music-phase" @click="resumeIfBlocked">
     <div class="music-container">
       <h2>🎵 Listen Carefully!</h2>
 
@@ -13,20 +13,13 @@
         @ended="isPlaying = false"
       ></audio>
 
-      <!-- Tap-to-play overlay when autoplay is blocked (e.g. after page reload) -->
-      <button
-        v-if="autoplayBlocked"
-        class="tap-to-play"
-        @click="resumePlayback"
-      >
-        <span class="tap-icon">▶</span>
-        <span>Tap to play music</span>
-      </button>
-
-      <div v-else class="music-visualizer" :class="{ playing: isPlaying }">
+      <div class="music-visualizer" :class="{ playing: isPlaying }">
         <div class="bar" v-for="i in 8" :key="i"></div>
       </div>
-      <p class="instruction">Guess the song...</p>
+      <p v-if="autoplayBlocked" class="instruction tap-hint">
+        Tap anywhere to play music
+      </p>
+      <p v-else class="instruction">Guess the song...</p>
     </div>
   </div>
 </template>
@@ -39,12 +32,17 @@ export default {
       type: Object,
       default: null,
     },
+    seekOffset: {
+      type: Number,
+      default: 0,
+    },
   },
   data() {
     return {
       isPlaying: false,
       audioError: false,
       autoplayBlocked: false,
+      hasSeeked: false,
     };
   },
   watch: {
@@ -53,6 +51,7 @@ export default {
         if (newTrack?.previewUrl) {
           this.audioError = false;
           this.autoplayBlocked = false;
+          this.hasSeeked = false;
           this.$nextTick(() => {
             this.tryPlay();
           });
@@ -61,11 +60,23 @@ export default {
       immediate: true,
     },
   },
+  mounted() {
+    // Listen for any click/tap on the document to unlock audio
+    this._docClickHandler = () => this.resumeIfBlocked();
+    document.addEventListener('click', this._docClickHandler, { once: false });
+    document.addEventListener('touchstart', this._docClickHandler, {
+      once: false,
+    });
+  },
   beforeUnmount() {
     const audio = this.$refs.audioPlayer;
     if (audio) {
       audio.pause();
       audio.src = '';
+    }
+    if (this._docClickHandler) {
+      document.removeEventListener('click', this._docClickHandler);
+      document.removeEventListener('touchstart', this._docClickHandler);
     }
   },
   methods: {
@@ -73,31 +84,51 @@ export default {
       const audio = this.$refs.audioPlayer;
       if (!audio) return;
       audio.load();
-      audio.play().catch((err) => {
-        if (err.name === 'NotAllowedError') {
-          // Browser blocked autoplay — show tap-to-play button
-          this.autoplayBlocked = true;
-        } else {
-          console.error('Audio playback failed:', err);
-          this.audioError = true;
-        }
-      });
+      audio
+        .play()
+        .then(() => {
+          this.seekToOffset();
+        })
+        .catch((err) => {
+          if (err.name === 'NotAllowedError') {
+            this.autoplayBlocked = true;
+          } else {
+            console.error('Audio playback failed:', err);
+            this.audioError = true;
+          }
+        });
     },
-    resumePlayback() {
+    seekToOffset() {
+      if (this.hasSeeked || this.seekOffset <= 0) return;
+      const audio = this.$refs.audioPlayer;
+      if (!audio || !audio.duration) return;
+      const target = Math.min(this.seekOffset, audio.duration - 0.5);
+      if (target > 0) {
+        audio.currentTime = target;
+      }
+      this.hasSeeked = true;
+    },
+    resumeIfBlocked() {
+      if (!this.autoplayBlocked) return;
       this.autoplayBlocked = false;
-      this.$nextTick(() => {
-        const audio = this.$refs.audioPlayer;
-        if (audio) {
-          audio.play().catch((err) => {
+      const audio = this.$refs.audioPlayer;
+      if (audio) {
+        audio
+          .play()
+          .then(() => {
+            this.seekToOffset();
+          })
+          .catch((err) => {
             console.error('Audio playback failed after tap:', err);
             this.audioError = true;
           });
-        }
-      });
+      }
     },
     onPlaying() {
       this.isPlaying = true;
       this.autoplayBlocked = false;
+      // Seek once audio is actually playing and duration is known
+      this.seekToOffset();
     },
     onAudioError(e) {
       console.error('Audio error:', e);
@@ -196,31 +227,21 @@ audio {
   margin: 0;
 }
 
-.tap-to-play {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 40px;
-  margin-bottom: 32px;
-  background: #f5f5f5;
-  border: 2px dashed #bbb;
-  border-radius: 12px;
+.tap-hint {
+  color: #2196f3;
+  font-weight: 600;
+  animation: pulse-text 1.5s ease-in-out infinite;
   cursor: pointer;
-  font-size: 16px;
-  color: #555;
-  transition: all 0.2s;
 }
 
-.tap-to-play:hover {
-  background: #e8f4fd;
-  border-color: #2196f3;
-  color: #1976d2;
-}
-
-.tap-icon {
-  font-size: 36px;
-  line-height: 1;
+@keyframes pulse-text {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .audio-error {

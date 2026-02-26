@@ -7,11 +7,11 @@ import App from './App.vue';
 const routes = [
   {
     path: '/',
-    component: () => HomeView,
+    component: HomeView,
   },
   {
     path: '/game',
-    component: () => GameView,
+    component: GameView,
   },
 ];
 
