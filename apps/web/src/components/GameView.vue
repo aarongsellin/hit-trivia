@@ -8,6 +8,17 @@
       ></div>
     </div>
 
+    <!-- Floating Mute Button -->
+    <button
+      v-if="showMuteButton"
+      class="mute-btn"
+      @click="toggleMute"
+      :title="musicMuted ? 'Unmute music' : 'Mute music'"
+    >
+      <span v-if="musicMuted">🔇</span>
+      <span v-else>🔊</span>
+    </button>
+
     <!-- DEBUG: Uncomment for development
     <div class="header">
       <p>Status: {{ socket.status }}</p>
@@ -86,6 +97,7 @@
       v-else-if="gameState === 'PLAYING_MUSIC'"
       :track="currentTrack"
       :seek-offset="musicSeekOffset"
+      :muted="musicMuted"
     />
 
     <GuessingPhase
@@ -213,6 +225,9 @@ export default {
       // Whether the player was blocked from joining
       joinBlocked: false,
       joinBlockedMessage: '',
+
+      // Music mute state — muted by default for non-host players
+      musicMuted: true,
     };
   },
   created: function () {
@@ -257,6 +272,22 @@ export default {
       }
       return 0;
     },
+    showMuteButton() {
+      return (
+        this.playerName &&
+        ['PLAYING_MUSIC', 'GUESSING', 'REVEAL', 'WAITING'].includes(
+          this.gameState
+        )
+      );
+    },
+  },
+  beforeUnmount() {
+    // Clear playerName so the next game shows the name entry screen.
+    // This does NOT fire on page refresh, so reconnect keeps the stored name.
+    localStorage.removeItem('playerName');
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+    }
   },
   watch: {
     'socket.data': function () {
@@ -266,13 +297,42 @@ export default {
   methods: {
     clearStorage() {
       this.playerId = null;
-      localStorage.setItem('playerId', null);
+      this.playerName = null;
+      this.nameInput = '';
+      localStorage.removeItem('playerId');
+      localStorage.removeItem('playerName');
       this.isAdmin = false;
       this.gameState = null;
+    },
+    toggleMute() {
+      this.musicMuted = !this.musicMuted;
+    },
+    unlockAudio() {
+      // Play a tiny silent WAV to unlock the browser's autoplay policy.
+      // This must happen inside a user-gesture handler (click / tap).
+      try {
+        const silence = new Audio(
+          'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+        );
+        silence.volume = 0;
+        silence
+          .play()
+          .then(() => silence.pause())
+          .catch(() => {});
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx.resume().catch(() => {});
+      } catch (_) {
+        /* ignore */
+      }
     },
     submitName() {
       const name = this.nameInput.trim();
       if (!name) return;
+      this.unlockAudio();
       this.playerName = name;
       localStorage.setItem('playerName', name);
       this.handlePlayerJoin();
@@ -395,6 +455,10 @@ export default {
                 break;
               case 'admin':
                 this.isAdmin = element;
+                // Host plays music by default; guests are muted
+                if (element === true) {
+                  this.musicMuted = false;
+                }
                 break;
               case 'gameState':
                 this.gameState = element;
@@ -560,6 +624,35 @@ export default {
   background: linear-gradient(90deg, #2196f3, #1976d2);
   transition: width 0.05s linear;
   box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+}
+
+/* Floating Mute Button */
+.mute-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  background: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.mute-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.mute-btn:active {
+  transform: scale(0.95);
 }
 
 .header {

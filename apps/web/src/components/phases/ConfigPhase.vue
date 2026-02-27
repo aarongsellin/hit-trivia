@@ -77,6 +77,14 @@
         </div>
 
         <button @click="handleStart" class="start-btn">Start Game</button>
+
+        <div class="host-music-hint">
+          <span class="hint-icon">🔊</span>
+          <span
+            >Music plays on your device by default. Other players are muted —
+            they can unmute with the speaker button.</span
+          >
+        </div>
       </div>
 
       <!-- Right: QR Code & Join Info -->
@@ -389,6 +397,26 @@ export default {
 
 .start-btn:hover {
   background: #333;
+}
+
+.host-music-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.hint-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 @media (max-width: 768px) {

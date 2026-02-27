@@ -2,6 +2,10 @@
   <div class="guessing-phase">
     <div class="guessing-container">
       <h2>{{ submitted ? 'Guess Locked In' : "What's the song?" }}</h2>
+      <p v-if="!submitted" class="guess-hint">
+        You can guess the <strong>title</strong>, <strong>artist</strong>, or
+        <strong>album</strong>
+      </p>
 
       <div
         class="input-wrapper"
@@ -92,10 +96,20 @@ export default {
 }
 
 .guessing-container h2 {
-  margin: 0 0 28px 0;
+  margin: 0 0 8px 0;
   color: #1a1a1a;
   font-size: 24px;
   font-weight: 700;
+}
+
+.guess-hint {
+  color: #9ca3af;
+  font-size: 14px;
+  margin: 0 0 24px 0;
+}
+
+.guess-hint strong {
+  color: #6b7280;
 }
 
 .input-wrapper {

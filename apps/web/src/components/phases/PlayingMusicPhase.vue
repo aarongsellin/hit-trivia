@@ -7,16 +7,20 @@
       <audio
         ref="audioPlayer"
         :src="track?.previewUrl"
+        :muted="muted"
         autoplay
         @error="onAudioError"
         @playing="onPlaying"
         @ended="isPlaying = false"
       ></audio>
 
-      <div class="music-visualizer" :class="{ playing: isPlaying }">
+      <div class="music-visualizer" :class="{ playing: isPlaying && !muted }">
         <div class="bar" v-for="i in 8" :key="i"></div>
       </div>
-      <p v-if="autoplayBlocked" class="instruction tap-hint">
+      <p v-if="muted" class="instruction muted-hint">
+        🔇 Music is muted — tap the speaker button to listen
+      </p>
+      <p v-else-if="autoplayBlocked" class="instruction tap-hint">
         Tap anywhere to play music
       </p>
       <p v-else class="instruction">Guess the song...</p>
@@ -36,6 +40,10 @@ export default {
       type: Number,
       default: 0,
     },
+    muted: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -46,27 +54,40 @@ export default {
     };
   },
   watch: {
-    track: {
-      handler(newTrack) {
-        if (newTrack?.previewUrl) {
-          this.audioError = false;
-          this.autoplayBlocked = false;
-          this.hasSeeked = false;
-          this.$nextTick(() => {
-            this.tryPlay();
-          });
-        }
-      },
-      immediate: true,
+    // When track changes AFTER mount (e.g. next round), start playback
+    track(newTrack) {
+      if (newTrack?.previewUrl) {
+        this.audioError = false;
+        this.autoplayBlocked = false;
+        this.hasSeeked = false;
+        this.startPlayback();
+      }
     },
   },
   mounted() {
+    // Start playback on initial mount
+    if (this.track?.previewUrl) {
+      this.startPlayback();
+    }
+
     // Listen for any click/tap on the document to unlock audio
-    this._docClickHandler = () => this.resumeIfBlocked();
-    document.addEventListener('click', this._docClickHandler, { once: false });
-    document.addEventListener('touchstart', this._docClickHandler, {
-      once: false,
-    });
+    this._docClickHandler = () => {
+      if (this.autoplayBlocked) {
+        const audio = this.$refs.audioPlayer;
+        if (audio) {
+          audio
+            .play()
+            .then(() => {
+              this.autoplayBlocked = false;
+              this.isPlaying = true;
+              this.seekToOffset();
+            })
+            .catch(() => {});
+        }
+      }
+    };
+    document.addEventListener('click', this._docClickHandler);
+    document.addEventListener('touchstart', this._docClickHandler);
   },
   beforeUnmount() {
     const audio = this.$refs.audioPlayer;
@@ -74,29 +95,35 @@ export default {
       audio.pause();
       audio.src = '';
     }
-    if (this._docClickHandler) {
-      document.removeEventListener('click', this._docClickHandler);
-      document.removeEventListener('touchstart', this._docClickHandler);
-    }
+    document.removeEventListener('click', this._docClickHandler);
+    document.removeEventListener('touchstart', this._docClickHandler);
   },
   methods: {
-    tryPlay() {
-      const audio = this.$refs.audioPlayer;
-      if (!audio) return;
-      audio.load();
-      audio
-        .play()
-        .then(() => {
-          this.seekToOffset();
-        })
-        .catch((err) => {
-          if (err.name === 'NotAllowedError') {
-            this.autoplayBlocked = true;
-          } else {
-            console.error('Audio playback failed:', err);
-            this.audioError = true;
-          }
-        });
+    startPlayback() {
+      this.$nextTick(() => {
+        const audio = this.$refs.audioPlayer;
+        if (!audio) {
+          console.warn('PlayingMusicPhase: audio ref not available');
+          return;
+        }
+        // Force the element to pick up the new src
+        audio.load();
+
+        audio
+          .play()
+          .then(() => {
+            this.isPlaying = true;
+            this.seekToOffset();
+          })
+          .catch((err) => {
+            if (err.name === 'NotAllowedError') {
+              this.autoplayBlocked = true;
+            } else if (err.name !== 'AbortError') {
+              console.error('Audio playback failed:', err);
+              this.audioError = true;
+            }
+          });
+      });
     },
     seekToOffset() {
       if (this.hasSeeked || this.seekOffset <= 0) return;
@@ -110,24 +137,21 @@ export default {
     },
     resumeIfBlocked() {
       if (!this.autoplayBlocked) return;
-      this.autoplayBlocked = false;
       const audio = this.$refs.audioPlayer;
       if (audio) {
         audio
           .play()
           .then(() => {
+            this.autoplayBlocked = false;
+            this.isPlaying = true;
             this.seekToOffset();
           })
-          .catch((err) => {
-            console.error('Audio playback failed after tap:', err);
-            this.audioError = true;
-          });
+          .catch(() => {});
       }
     },
     onPlaying() {
       this.isPlaying = true;
       this.autoplayBlocked = false;
-      // Seek once audio is actually playing and duration is known
       this.seekToOffset();
     },
     onAudioError(e) {
@@ -232,6 +256,11 @@ audio {
   font-weight: 600;
   animation: pulse-text 1.5s ease-in-out infinite;
   cursor: pointer;
+}
+
+.muted-hint {
+  color: #9ca3af;
+  font-size: 14px;
 }
 
 @keyframes pulse-text {
