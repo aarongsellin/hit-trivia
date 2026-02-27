@@ -21,6 +21,7 @@ node_modules
 .env
 .env.local
 .env.*.local
+application-local.properties
 
 # IDEs and editors
 /.idea

@@ -1,52 +1,73 @@
-#### JUST NU
+# Hit Trivia 🎵
 
-Vi behöver ett sätt i frontend att sätta en spelare mitt i en phase. En check i gameView för när de får gameState, om en timestamp är inom en viss ram av tid så ska den automatiskt sätta upp allting ordentligt, och skippa ordentligt i playern. Vi behöver skicka med en startTimestamp och inte bara endTimestamp för gameState/phaseChange
+A real-time multiplayer music trivia game. Create a game, invite friends with a QR code, and see who can guess the song from a short clip.
 
-# Introduction
+**Live:** [hit-trivia-production.up.railway.app](https://hit-trivia-production.up.railway.app)
 
-Hit Trivia is an online music quizz game that I built to learn Spring Boot. Anyone can create a game, invite their friends with a QR code, and see who has the best music knowledge.
+## How It Works
 
-# How to setup
+1. One player creates a game and configures the genre, decade, obscurity, and number of rounds
+2. Other players join by scanning the QR code or sharing the link
+3. Each round: a short music clip plays → everyone guesses the title, artist, or album → scores are revealed
+4. After all rounds, the final scoreboard shows the winner
+
+## Tech Stack
+
+| Layer    | Technology                                               |
+| -------- | -------------------------------------------------------- |
+| Frontend | Vue 3 (Options API), Vue Router, @vueuse/core            |
+| Backend  | Java 21, Spring Boot 4, WebSocket (TextWebSocketHandler) |
+| Music    | Apple Music MusicKit API (track previews & music videos) |
+| Build    | Nx monorepo, Maven, Docker multi-stage build             |
+| Deploy   | Railway (Dockerfile builder)                             |
+
+## Project Structure
 
 ```
-npx run dev
+apps/
+  web/          → Vue 3 frontend (served as static files from Spring Boot)
+  backend/      → Spring Boot backend (WebSocket game server + REST API)
 ```
 
-# Developer Story
+## Local Development
 
-Here I explain why I made the design choices that I made and also go into detail about the stack and what the different parts are used for.
+```bash
+# Install frontend dependencies
+cd apps/web && npm install && cd ../..
 
-### Stack
+# Run both frontend and backend in parallel
+npm run dev
+```
 
-Stack:
-Frontend: Vue + localStorage (för player state)
-Backend: Spring Boot + WebSocket (för game coordination)
-Database: PostgreSQL (för game history/stats och eventuellt tracks) (mest nice to have) & Redis (to restore games after a crash or quick restart)
+The frontend dev server runs on `http://localhost:3000` and the backend on `http://localhost:8080`.
 
-### Depth on design and optimization choices.
+### Environment Variables
 
-Here I go over the steps for optimization that I made and why.
+| Variable            | Description                                | Default                 |
+| ------------------- | ------------------------------------------ | ----------------------- |
+| `APPLE_TEAM_ID`     | Apple Developer Team ID                    | —                       |
+| `APPLE_KEY_ID`      | MusicKit private key ID                    | —                       |
+| `APPLE_PRIVATE_KEY` | MusicKit private key (PKCS8)               | —                       |
+| `ALLOWED_ORIGINS`   | CORS allowed origins (comma-separated)     | `http://localhost:3000` |
+| `PORT`              | Server port (set automatically by Railway) | `8080`                  |
 
-**Tracks & Apple WebKit**: when a game starts, all clients get the information about all the tracks that will be played during the run of the game. During each WAIT phase before the PLAYING_MUSIC phase we pre-load the part of the track that we will use, this way there is no buffering for the client.
+## Docker
 
-**Time Conformity**: All phase changes are based around a detla from what the server regards as the current time.
+```bash
+# Build and run locally
+docker compose up --build
+```
 
-**Crash Stuff**: We store each started game in Redis, when anything changes we update the relevant template in redis for each game. When the server startsup it will first check Redis for any games that were started and that are still in progress prior to the crash. This ensures that games get re-instated and not lost even after a crash.
+The multi-stage Dockerfile builds the Vue frontend, packages it into the Spring Boot static resources, and produces a minimal JRE image.
 
-**Analytics**: We track failed requests to a Redis database, that way we can quickly see if a new update is increasing client failures.
+## Design Decisions
 
-### Monetization
+**All tracks sent upfront** - When a game starts, every client receives the full track list. During each WAITING phase before PLAYING_MUSIC, the browser preloads the next audio clip so there's zero buffering.
 
-Apple Music has a very strict roster of who is allowed to become an affiliate, only websites that drive strong and meaningfull trafic are allowed into their "" program. Therefor in the beginning the most viable option is to play an add before starting the game. But we have to be carefull as to not make it too intrisive, a banner add on each device as things are playing is OK and maybe a video add for the creator of the game when they hit create game.
+**Server-authoritative timing** - All phase countdowns use server timestamps. Clients compute progress bars from `startTimestamp` / `endTimestamp`, so even a page reload shows the correct remaining time.
 
-Why only the host is allowed to play the Music.
+**Reconnect-first** - Player ID and name are stored in localStorage. On page reload, the client auto-reconnects to the WebSocket and the server sends the full current game state (phase, tracks, round, scores). The experience is seamless.
 
-Game creator need to be able to set timer states.
+**Mute by default for guests** - Only the host plays music out loud by default. Other players are muted to avoid cacophony in the same room. Everyone can toggle with the floating speaker button.
 
-Autoplay songs or click to continue.
-
-Användare behöver skriva in ett namn
-
-Tydligt visa för användaren om de tappar uppkoppling till spelet
-
-Tungt focus på re-connect, om en användare tappar uppkoppling, laddar om sidan, etc, så får användaren upplevelsen som att ingenting hände.
+**Music Engine** - Currently using the Top lists from Apple Music for genre and decade.
