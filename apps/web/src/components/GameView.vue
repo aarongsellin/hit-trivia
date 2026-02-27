@@ -444,16 +444,24 @@ export default {
         if (type === 'data') {
           const keys = Object.keys(parsed);
 
+          // If this message contains a playerId that isn't ours,
+          // it's a broadcast about another player — skip identity fields.
+          const msgPlayerId = parsed.playerId;
+          const isAboutUs =
+            !msgPlayerId || !this.playerId || msgPlayerId === this.playerId;
+
           for (let i = 0; i < Object.keys(parsed).length; ++i) {
             const key = keys.at(i);
             const element = parsed[key];
 
             switch (key) {
               case 'playerId':
+                if (!isAboutUs) break; // not our data — ignore
                 this.playerId = element;
                 localStorage.setItem('playerId', this.playerId);
                 break;
               case 'admin':
+                if (!isAboutUs) break; // not our data — ignore
                 this.isAdmin = element;
                 // Host plays music by default; guests are muted
                 if (element === true) {
