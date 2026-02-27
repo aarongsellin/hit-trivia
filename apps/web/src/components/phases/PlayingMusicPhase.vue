@@ -54,21 +54,35 @@ export default {
     };
   },
   watch: {
-    // When track changes AFTER mount (e.g. next round), start playback
+    // When track changes AFTER mount (e.g. next round), the :src binding
+    // updates and autoplay kicks in. Just reset state.
     track(newTrack) {
       if (newTrack?.previewUrl) {
         this.audioError = false;
         this.autoplayBlocked = false;
         this.hasSeeked = false;
-        this.startPlayback();
       }
     },
   },
   mounted() {
-    // Start playback on initial mount
-    if (this.track?.previewUrl) {
-      this.startPlayback();
-    }
+    // After a short delay, check if autoplay was silently blocked
+    this._autoplayCheck = setTimeout(() => {
+      const audio = this.$refs.audioPlayer;
+      if (audio && audio.paused && this.track?.previewUrl) {
+        // autoplay didn't fire — try manually
+        audio
+          .play()
+          .then(() => {
+            this.isPlaying = true;
+            this.seekToOffset();
+          })
+          .catch((err) => {
+            if (err.name === 'NotAllowedError') {
+              this.autoplayBlocked = true;
+            }
+          });
+      }
+    }, 500);
 
     // Listen for any click/tap on the document to unlock audio
     this._docClickHandler = () => {
@@ -90,6 +104,9 @@ export default {
     document.addEventListener('touchstart', this._docClickHandler);
   },
   beforeUnmount() {
+    if (this._autoplayCheck) {
+      clearTimeout(this._autoplayCheck);
+    }
     const audio = this.$refs.audioPlayer;
     if (audio) {
       audio.pause();
@@ -99,32 +116,6 @@ export default {
     document.removeEventListener('touchstart', this._docClickHandler);
   },
   methods: {
-    startPlayback() {
-      this.$nextTick(() => {
-        const audio = this.$refs.audioPlayer;
-        if (!audio) {
-          console.warn('PlayingMusicPhase: audio ref not available');
-          return;
-        }
-        // Force the element to pick up the new src
-        audio.load();
-
-        audio
-          .play()
-          .then(() => {
-            this.isPlaying = true;
-            this.seekToOffset();
-          })
-          .catch((err) => {
-            if (err.name === 'NotAllowedError') {
-              this.autoplayBlocked = true;
-            } else if (err.name !== 'AbortError') {
-              console.error('Audio playback failed:', err);
-              this.audioError = true;
-            }
-          });
-      });
-    },
     seekToOffset() {
       if (this.hasSeeked || this.seekOffset <= 0) return;
       const audio = this.$refs.audioPlayer;
