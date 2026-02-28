@@ -89,31 +89,55 @@ public class AppleMusicCatalogService {
     /**
      * Get songs based on game configuration (genre, decade, etc.)
      * Returns a shuffled list of tracks with preview URLs.
+     *
+     * Strategy:
+     * 1. When a decade is selected, search for well-known artists of that era
+     *    (filtered by genre if provided) and post-filter by releaseDate.
+     * 2. When only a genre is selected, use the charts API with genre filter.
+     * 3. Fallback to general top charts.
      */
     public List<Track> getTracksForGame(String genre, String decade, String storefront, int count) throws Exception {
-        List<Track> tracks;
-
+        List<Track> pool = new ArrayList<>();
         String genreId = mapGenreToAppleId(genre);
 
         if (decade != null && !decade.isEmpty()) {
-            // Search by decade + genre
-            String searchTerm = buildDecadeSearchTerm(decade, genre);
-            tracks = searchSongs(searchTerm, storefront, count * 2);
+            // Build multiple targeted searches using iconic artists/terms from the era+genre
+            List<String> searchTerms = buildDecadeSearchTerms(decade, genre);
+            for (String term : searchTerms) {
+                try {
+                    List<Track> batch = searchSongs(term, storefront, 25);
+                    pool.addAll(batch);
+                } catch (Exception e) {
+                    log.warn("Search failed for term '{}': {}", term, e.getMessage());
+                }
+                // Stop early if we have plenty of candidates
+                if (pool.size() >= count * 6) break;
+            }
+
+            // Post-filter: keep only tracks whose release year falls within the decade
+            int startYear = parseDecadeStartYear(decade);
+            int endYear = startYear + 9;
+            pool = pool.stream()
+                    .filter(t -> t.releaseYear() >= startYear && t.releaseYear() <= endYear)
+                    .toList();
         } else if (genreId != null) {
-            // Use charts for the genre
-            tracks = getChartSongs(storefront, count * 2, genreId);
+            pool = getChartSongs(storefront, count * 3, genreId);
         } else {
-            // General top songs
-            tracks = getChartSongs(storefront, count * 2, null);
+            pool = getChartSongs(storefront, count * 3, null);
         }
 
-        // Filter out tracks without preview URLs
-        tracks = tracks.stream()
-                .filter(t -> t.previewUrl() != null && !t.previewUrl().isEmpty())
-                .toList();
+        // Filter out tracks without preview URLs and deduplicate by title+artist
+        java.util.LinkedHashMap<String, Track> seen = new java.util.LinkedHashMap<>();
+        for (Track t : pool) {
+            if (t.previewUrl() != null && !t.previewUrl().isEmpty()) {
+                String key = normalizeForMatch(t.title()) + "|" + normalizeForMatch(t.artist());
+                seen.putIfAbsent(key, t);
+            }
+        }
+        pool = new ArrayList<>(seen.values());
 
         // Shuffle and take the requested count
-        List<Track> mutableTracks = new ArrayList<>(tracks);
+        List<Track> mutableTracks = new ArrayList<>(pool);
         Collections.shuffle(mutableTracks);
 
         List<Track> selected = mutableTracks.subList(0, Math.min(mutableTracks.size(), count));
@@ -155,6 +179,14 @@ public class AppleMusicCatalogService {
         String artworkUrl = attrs.path("artwork").path("url").asText("")
                 .replace("{w}", "300").replace("{h}", "300");
 
+        int releaseYear = 0;
+        String releaseDate = attrs.path("releaseDate").asText("");
+        if (releaseDate.length() >= 4) {
+            try {
+                releaseYear = Integer.parseInt(releaseDate.substring(0, 4));
+            } catch (NumberFormatException ignored) {}
+        }
+
         return new Track(
                 attrs.path("name").asText("Unknown"),
                 attrs.path("artistName").asText("Unknown"),
@@ -162,7 +194,8 @@ public class AppleMusicCatalogService {
                 previewUrl,
                 artworkUrl,
                 "", // musicVideoUrl — filled in later by enrichWithMusicVideos
-                0
+                0,
+                releaseYear
         );
     }
 
@@ -181,7 +214,8 @@ public class AppleMusicCatalogService {
                     track.previewUrl(),
                     track.artworkUrl(),
                     videoUrl != null ? videoUrl : "",
-                    track.startTimeSeconds()
+                    track.startTimeSeconds(),
+                    track.releaseYear()
             ));
         }
         return enriched;
@@ -264,19 +298,92 @@ public class AppleMusicCatalogService {
         };
     }
 
-    private String buildDecadeSearchTerm(String decade, String genre) {
-        // Build a search query that targets a specific decade
-        // Apple Music doesn't have a direct decade filter, so we use popular artists/songs from that era
-        String genrePart = (genre != null && !genre.isEmpty()) ? " " + genre : "";
-        return switch (decade) {
-            case "60s", "1960s" -> "greatest hits 1960s" + genrePart;
-            case "70s", "1970s" -> "greatest hits 1970s" + genrePart;
-            case "80s", "1980s" -> "greatest hits 1980s" + genrePart;
-            case "90s", "1990s" -> "greatest hits 1990s" + genrePart;
-            case "2000s" -> "greatest hits 2000s" + genrePart;
-            case "2010s" -> "hits 2010s" + genrePart;
-            case "2020s" -> "hits 2020s" + genrePart;
-            default -> "greatest hits" + genrePart;
-        };
+
+
+    /**
+     * Parse a decade string like "1960s" or "60s" into the start year (e.g. 1960).
+     */
+    private int parseDecadeStartYear(String decade) {
+        if (decade == null) return 0;
+        String cleaned = decade.replaceAll("[^0-9]", "");
+        try {
+            int num = Integer.parseInt(cleaned);
+            // Handle two-digit decades: 60 -> 1960, 00 -> 2000
+            if (num < 100) {
+                num = num >= 30 ? 1900 + num : 2000 + num;
+            }
+            return num;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Build multiple search terms targeting well-known artists and songs from a
+     * specific decade, optionally scoped to a genre. This produces much better
+     * results than a single "greatest hits 1960s" query.
+     */
+    private List<String> buildDecadeSearchTerms(String decade, String genre) {
+        // Map of decade -> list of representative artists that Apple Music indexes well.
+        // We search by artist name which reliably returns their catalogue;
+        // the releaseDate post-filter then keeps only tracks from the right decade.
+        var artistsByDecade = java.util.Map.ofEntries(
+            java.util.Map.entry("1960", List.of(
+                "The Beatles", "The Rolling Stones", "Bob Dylan", "Aretha Franklin",
+                "The Supremes", "Jimi Hendrix", "The Beach Boys", "Elvis Presley",
+                "Simon & Garfunkel", "Stevie Wonder", "Marvin Gaye", "The Who"
+            )),
+            java.util.Map.entry("1970", List.of(
+                "Led Zeppelin", "Fleetwood Mac", "David Bowie", "Queen",
+                "Eagles", "Pink Floyd", "ABBA", "Bee Gees",
+                "Elton John", "Stevie Wonder", "Donna Summer", "The Clash"
+            )),
+            java.util.Map.entry("1980", List.of(
+                "Michael Jackson", "Prince", "Madonna", "U2",
+                "Whitney Houston", "Depeche Mode", "Bruce Springsteen", "Bon Jovi",
+                "a-ha", "Tears for Fears", "Phil Collins", "Guns N' Roses"
+            )),
+            java.util.Map.entry("1990", List.of(
+                "Nirvana", "Oasis", "TLC", "Backstreet Boys",
+                "Tupac", "Notorious B.I.G.", "Spice Girls", "Radiohead",
+                "Alanis Morissette", "Red Hot Chili Peppers", "Britney Spears", "R.E.M."
+            )),
+            java.util.Map.entry("2000", List.of(
+                "Eminem", "Beyoncé", "Coldplay", "OutKast",
+                "Usher", "Nelly", "Green Day", "Alicia Keys",
+                "50 Cent", "Shakira", "Linkin Park", "The Black Eyed Peas"
+            )),
+            java.util.Map.entry("2010", List.of(
+                "Taylor Swift", "Drake", "Ed Sheeran", "Adele",
+                "Bruno Mars", "Kendrick Lamar", "The Weeknd", "Rihanna",
+                "Billie Eilish", "Ariana Grande", "Post Malone", "Imagine Dragons"
+            )),
+            java.util.Map.entry("2020", List.of(
+                "Olivia Rodrigo", "Dua Lipa", "Bad Bunny", "The Weeknd",
+                "Harry Styles", "Doja Cat", "Morgan Wallen", "SZA",
+                "Miley Cyrus", "Taylor Swift", "Sabrina Carpenter", "Tyler the Creator"
+            ))
+        );
+
+        int startYear = parseDecadeStartYear(decade);
+        String decadeKey = String.valueOf(startYear);
+        List<String> artists = artistsByDecade.getOrDefault(decadeKey, List.of());
+
+        // If we have representative artists, search for each one
+        // (limit to 6 to keep API calls reasonable)
+        List<String> terms = new ArrayList<>();
+        if (!artists.isEmpty()) {
+            List<String> shuffled = new ArrayList<>(artists);
+            Collections.shuffle(shuffled);
+            for (String artist : shuffled.subList(0, Math.min(6, shuffled.size()))) {
+                terms.add(artist);
+            }
+        }
+
+        // Always add a genre+decade fallback term
+        String genrePart = (genre != null && !genre.isEmpty()) ? genre + " " : "";
+        terms.add(genrePart + "hits " + decade);
+
+        return terms;
     }
 }

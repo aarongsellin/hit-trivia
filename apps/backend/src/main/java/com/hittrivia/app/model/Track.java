@@ -7,5 +7,6 @@ public record Track(
     String previewUrl,
     String artworkUrl,
     String musicVideoUrl,
-    int startTimeSeconds
+    int startTimeSeconds,
+    int releaseYear
 ) {}
