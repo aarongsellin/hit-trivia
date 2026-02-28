@@ -8,7 +8,6 @@ C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittri
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\GameResponse.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\MessageType.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\dto\NewGameResponse.java
-C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\fixtures\MockTracks.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\game\Game.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\game\Quizz.java
 C:\Users\46705\Documents\GitHub\hit-trivia\apps\backend\src\main\java\com\hittrivia\app\handlers\GameSocketHandler.java

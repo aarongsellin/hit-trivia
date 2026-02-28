@@ -83,6 +83,7 @@ public class AppleMusicTokenService {
     }
 
     private ECPrivateKey loadPrivateKey() throws Exception {
+        // denna behöver ses över
         // Strip PEM headers/footers and whitespace
         String base64Key = privateKeyPem
                 .replace("-----BEGIN PRIVATE KEY-----", "")

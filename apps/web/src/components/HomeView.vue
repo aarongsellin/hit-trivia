@@ -106,6 +106,58 @@
       </div>
     </section>
 
+    <!-- Live Games Marquee -->
+    <section v-if="activeGames.length > 0" class="live-marquee">
+      <div class="marquee-label">
+        <span class="marquee-dot"></span>
+        Live now
+      </div>
+      <div class="marquee-track" ref="marqueeTrack">
+        <div class="marquee-inner">
+          <div
+            class="marquee-card"
+            v-for="(game, i) in repeatedGames"
+            :key="'a-' + i"
+          >
+            <div class="marquee-card-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+            </div>
+            <span class="marquee-card-text">
+              <strong>{{ game.host }}</strong>
+              <template v-if="game.players > 1">
+                and {{ game.players - 1 }}
+                {{ game.players === 2 ? 'friend' : 'friends' }}</template
+              >
+              {{ game.players === 1 ? 'is' : 'are' }} listening to
+              <span class="marquee-card-tag" v-if="game.decade && game.genre"
+                >{{ game.decade }} {{ game.genre }}</span
+              >
+              <span class="marquee-card-tag" v-else-if="game.decade"
+                >{{ game.decade }} music</span
+              >
+              <span class="marquee-card-tag" v-else-if="game.genre">{{
+                game.genre
+              }}</span>
+              <span class="marquee-card-tag" v-else>music</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- How It Works -->
     <section ref="howItWorks" class="how-it-works">
       <div class="section-container">
@@ -220,6 +272,7 @@ export default {
   data() {
     return {
       totalGameCount: 0,
+      activeGames: [],
       apiUrl: process.env.VUE_APP_API_URL || '',
       affiliateToken: process.env.VUE_APP_APPLE_AFFILIATE_TOKEN || '',
       isLoading: false,
@@ -267,12 +320,33 @@ export default {
   },
   mounted() {
     this.fetchGameCount();
+    this.fetchActiveGames();
+    this._activeGamesInterval = setInterval(
+      () => this.fetchActiveGames(),
+      15000
+    );
+  },
+  beforeUnmount() {
+    if (this._activeGamesInterval) clearInterval(this._activeGamesInterval);
   },
   computed: {
     affiliateUrl() {
       const base = 'https://music.apple.com/subscribe';
       if (!this.affiliateToken) return base;
       return `${base}?at=${encodeURIComponent(this.affiliateToken)}`;
+    },
+    repeatedGames() {
+      // Duplicate games enough times so the marquee can scroll continuously
+      if (this.activeGames.length === 0) return [];
+      const minCards = 20;
+      const repeats = Math.ceil(minCards / this.activeGames.length);
+      const result = [];
+      for (let r = 0; r < repeats * 2; r++) {
+        for (const game of this.activeGames) {
+          result.push(game);
+        }
+      }
+      return result;
     },
   },
   methods: {
@@ -309,6 +383,14 @@ export default {
         this.totalGameCount = data.count;
       } catch (err) {
         console.error('Error fetching game count:', err);
+      }
+    },
+    async fetchActiveGames() {
+      try {
+        const res = await fetch(`${this.apiUrl}/api/active-games`);
+        this.activeGames = await res.json();
+      } catch (err) {
+        console.error('Error fetching active games:', err);
       }
     },
     async createGame() {
@@ -589,6 +671,128 @@ export default {
   100% {
     transform: scaleY(1);
   }
+}
+
+/* ─── Live Marquee ─────────────────────────────── */
+
+.live-marquee {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 0;
+  background: #fafafa;
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.marquee-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background: #fafafa;
+  padding: 6px 16px 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #22c55e;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.marquee-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.marquee-track {
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+.marquee-inner {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  animation: marquee-scroll 60s linear infinite;
+}
+
+.marquee-inner:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 100px;
+  padding: 8px 16px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #4b5563;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
+}
+
+.marquee-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.marquee-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff0f2;
+  color: #e11d48;
+  flex-shrink: 0;
+}
+
+.marquee-card-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.marquee-card-text strong {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.marquee-card-tag {
+  color: #e11d48;
+  font-weight: 600;
 }
 
 /* ─── How It Works ─────────────────────────────── */

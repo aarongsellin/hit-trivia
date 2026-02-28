@@ -35,6 +35,10 @@ public class Game {
     private Quizz quizz;
     private List<Track> tracks;
 
+    // Game configuration (set when game starts)
+    private String genre;
+    private String decade;
+
     private Phase phase = Phase.WAITING_CONFIG;
     private int currentRound = 0;
 
@@ -152,10 +156,17 @@ public class Game {
                 .orElse(null);
     }
 
+    public String getGenre() { return genre; }
+    public String getDecade() { return decade; }
+
     // This also starts the game...
     public void setConfiguration(JsonNode configuration) {
 
         System.out.println("configuration in game class: " + configuration);
+
+        // Store config for the active-games API
+        this.genre = configuration.has("genre") ? configuration.get("genre").asText(null) : null;
+        this.decade = configuration.has("decade") ? configuration.get("decade").asText(null) : null;
 
         quizz.loadTracks(configuration, catalogService);
 
@@ -325,8 +336,8 @@ public class Game {
     }
 
     public static class PhaseDelays {
-        private static final int MUSIC_DELAY = 15;
-        private static final int GUESS_DELAY = 15;
+        private static final int MUSIC_DELAY = 15;  
+        private static final int GUESS_DELAY = 30;
         private static final int REVEAL_DELAY = 15;
         private static final int WAIT_DELAY = 3;
 
