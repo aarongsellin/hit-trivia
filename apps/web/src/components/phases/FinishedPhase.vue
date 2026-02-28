@@ -2,7 +2,9 @@
   <div class="finished-phase">
     <div class="finished-container">
       <h2>Game Over!</h2>
-      <p class="rounds-label" v-if="finalScores">{{ finalScores.totalRounds }} rounds</p>
+      <p class="rounds-label" v-if="finalScores">
+        {{ finalScores.totalRounds }} rounds
+      </p>
 
       <div v-if="finalScores" class="final-scores">
         <!-- Podium for top 3 -->
@@ -11,24 +13,42 @@
           <div
             v-if="podiumPlayers[1]"
             class="podium-slot podium-slot--second"
-            :class="{ 'podium-slot--you': podiumPlayers[1].playerId === playerId }"
+            :class="{
+              'podium-slot--you': podiumPlayers[1].playerId === playerId,
+            }"
           >
             <div class="podium-medal">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                 <circle cx="18" cy="14" r="12" fill="#94a3b8" />
                 <circle cx="18" cy="14" r="9" fill="#cbd5e1" />
-                <text x="18" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="#475569">2</text>
+                <text
+                  x="18"
+                  y="18"
+                  text-anchor="middle"
+                  font-size="12"
+                  font-weight="700"
+                  fill="#475569"
+                >
+                  2
+                </text>
                 <path d="M12 24l6 10 6-10" fill="#94a3b8" />
               </svg>
             </div>
             <div class="podium-name">
               {{ podiumPlayers[1].name }}
-              <span v-if="podiumPlayers[1].playerId === playerId" class="you-badge">you</span>
+              <span
+                v-if="podiumPlayers[1].playerId === playerId"
+                class="you-badge"
+                >you</span
+              >
             </div>
             <div class="podium-score">{{ podiumPlayers[1].score }}</div>
             <div class="podium-block podium-block--second"></div>
           </div>
-          <div v-else class="podium-slot podium-slot--second podium-slot--empty">
+          <div
+            v-else
+            class="podium-slot podium-slot--second podium-slot--empty"
+          >
             <div class="podium-block podium-block--second"></div>
           </div>
 
@@ -36,19 +56,34 @@
           <div
             v-if="podiumPlayers[0]"
             class="podium-slot podium-slot--first"
-            :class="{ 'podium-slot--you': podiumPlayers[0].playerId === playerId }"
+            :class="{
+              'podium-slot--you': podiumPlayers[0].playerId === playerId,
+            }"
           >
             <div class="podium-medal">
               <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
                 <circle cx="22" cy="16" r="14" fill="#f59e0b" />
                 <circle cx="22" cy="16" r="10.5" fill="#fbbf24" />
-                <text x="22" y="20.5" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">1</text>
+                <text
+                  x="22"
+                  y="20.5"
+                  text-anchor="middle"
+                  font-size="14"
+                  font-weight="700"
+                  fill="#92400e"
+                >
+                  1
+                </text>
                 <path d="M14 28l8 14 8-14" fill="#f59e0b" />
               </svg>
             </div>
             <div class="podium-name">
               {{ podiumPlayers[0].name }}
-              <span v-if="podiumPlayers[0].playerId === playerId" class="you-badge">you</span>
+              <span
+                v-if="podiumPlayers[0].playerId === playerId"
+                class="you-badge"
+                >you</span
+              >
             </div>
             <div class="podium-score">{{ podiumPlayers[0].score }}</div>
             <div class="podium-block podium-block--first"></div>
@@ -61,19 +96,34 @@
           <div
             v-if="podiumPlayers[2]"
             class="podium-slot podium-slot--third"
-            :class="{ 'podium-slot--you': podiumPlayers[2].playerId === playerId }"
+            :class="{
+              'podium-slot--you': podiumPlayers[2].playerId === playerId,
+            }"
           >
             <div class="podium-medal">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                 <circle cx="18" cy="14" r="12" fill="#b45309" />
                 <circle cx="18" cy="14" r="9" fill="#d97706" />
-                <text x="18" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">3</text>
+                <text
+                  x="18"
+                  y="18"
+                  text-anchor="middle"
+                  font-size="12"
+                  font-weight="700"
+                  fill="#78350f"
+                >
+                  3
+                </text>
                 <path d="M12 24l6 10 6-10" fill="#b45309" />
               </svg>
             </div>
             <div class="podium-name">
               {{ podiumPlayers[2].name }}
-              <span v-if="podiumPlayers[2].playerId === playerId" class="you-badge">you</span>
+              <span
+                v-if="podiumPlayers[2].playerId === playerId"
+                class="you-badge"
+                >you</span
+              >
             </div>
             <div class="podium-score">{{ podiumPlayers[2].score }}</div>
             <div class="podium-block podium-block--third"></div>
@@ -101,10 +151,13 @@
               <td class="col-rank">{{ entry.rank }}</td>
               <td class="col-name">
                 {{ entry.name }}
-                <span v-if="entry.playerId === playerId" class="you-badge">you</span>
+                <span v-if="entry.playerId === playerId" class="you-badge"
+                  >you</span
+                >
               </td>
               <td class="col-score">
-                {{ entry.score }}<span class="score-max"> / {{ finalScores.maxScore }}</span>
+                {{ entry.score
+                }}<span class="score-max"> / {{ finalScores.maxScore }}</span>
               </td>
             </tr>
           </tbody>

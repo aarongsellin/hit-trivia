@@ -1,7 +1,24 @@
 <template>
   <div class="music-phase" @click="resumeIfBlocked">
     <div class="music-container">
-      <h2><svg class="inline-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Listen Carefully!</h2>
+      <h2>
+        <svg
+          class="inline-icon"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" />
+          <circle cx="18" cy="16" r="3" />
+        </svg>
+        Listen Carefully!
+      </h2>
 
       <!-- Apple Music Preview Audio -->
       <audio
@@ -18,7 +35,22 @@
         <div class="bar" v-for="i in 8" :key="i"></div>
       </div>
       <p v-if="muted" class="instruction muted-hint">
-        <svg class="inline-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg> Music is muted — tap the speaker button to listen
+        <svg
+          class="inline-icon"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <line x1="23" y1="9" x2="17" y2="15" />
+          <line x1="17" y1="9" x2="23" y2="15" />
+        </svg>
+        Music is muted — tap the speaker button to listen
       </p>
       <p v-else-if="autoplayBlocked" class="instruction tap-hint">
         Tap anywhere to play music
