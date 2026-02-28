@@ -70,7 +70,7 @@ public class Game {
     }
 
     public String getPlayerName(String playerId) {
-        return playerNames.getOrDefault(playerId, "Player");
+        return playerNames.getOrDefault(playerId, null);
     }
 
     public void setCatalogService(AppleMusicCatalogService catalogService) {
@@ -140,6 +140,16 @@ public class Game {
         return playerGuesses.getOrDefault(playerId, List.of()).stream()
                 .mapToInt(GuessResult::total)
                 .sum();
+    }
+
+    /**
+     * Returns the GuessResult for a player in a specific round, or null if none.
+     */
+    public GuessResult getGuessResultForRound(String playerId, int round) {
+        return playerGuesses.getOrDefault(playerId, List.of()).stream()
+                .filter(g -> g.round() == round)
+                .findFirst()
+                .orElse(null);
     }
 
     // This also starts the game...
@@ -341,10 +351,10 @@ public class Game {
 
     /**
      * Returns true if the game is still accepting new players.
-     * Only allows joining during the WAITING_CONFIG phase (lobby).
+     * Only blocks joining once the game is completely finished.
      */
     public boolean isJoinable() {
-        return phase == Phase.WAITING_CONFIG;
+        return phase != Phase.FINISHED;
     }
 
     public void removePlayer(String playerId) {
@@ -373,5 +383,21 @@ public class Game {
 
     public int getPlayerCount() {
         return players.size();
+    }
+
+    public int getCurrentRound() {
+        return currentRound;
+    }
+
+    public long getPhaseStartTimestamp() {
+        return phaseStartTimestamp;
+    }
+
+    public long getPhaseEndTimestamp() {
+        return phaseEndTimestamp;
+    }
+
+    public Phase getNextPhase() {
+        return nextPhase;
     }
 }

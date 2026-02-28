@@ -7,7 +7,7 @@
 
       <nav class="nav">
         <div class="nav-logo">
-          <span class="logo-icon">♫</span>
+          <span class="logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
           <span class="logo-text">Hit Trivia</span>
         </div>
         <div v-if="totalGameCount > 0" class="nav-stat">
@@ -106,7 +106,7 @@
         <div class="steps">
           <div class="step" v-for="(step, index) in steps" :key="index">
             <div class="step-number">{{ index + 1 }}</div>
-            <div class="step-icon">{{ step.icon }}</div>
+            <div class="step-icon" v-html="iconSvg(step.icon)"></div>
             <h3 class="step-title">{{ step.title }}</h3>
             <p class="step-desc">{{ step.desc }}</p>
           </div>
@@ -119,7 +119,7 @@
       <div class="section-container">
         <div class="features-grid">
           <div class="feature" v-for="(feature, i) in features" :key="i">
-            <div class="feature-icon">{{ feature.icon }}</div>
+            <div class="feature-icon" v-html="iconSvg(feature.icon)"></div>
             <h3 class="feature-title">{{ feature.title }}</h3>
             <p class="feature-desc">{{ feature.desc }}</p>
             <a
@@ -186,13 +186,21 @@
 </template>
 
 <script>
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import appleBadge from '../assets/listen-on-apple-music.svg';
 import appleBadgeBlack from '../assets/listen-on-apple-music-black.svg';
 
 export default {
   setup() {
     const router = useRouter();
+    const route = useRoute();
+
+    // If someone arrives at /?id=xxx, redirect them to /game?id=xxx
+    const gameId = route.query.id;
+    if (gameId) {
+      router.replace({ path: '/game', query: { id: gameId } });
+    }
+
     return { router, appleBadge, appleBadgeBlack };
   },
   data() {
@@ -203,39 +211,39 @@ export default {
       isLoading: false,
       steps: [
         {
-          icon: '🎧',
+          icon: 'headphones',
           title: 'Create a game',
           desc: 'Create a game and share the QR code with your friends to join.',
         },
         {
-          icon: '🎵',
+          icon: 'music',
           title: 'Listen & guess',
           desc: 'A short music clip plays. Race to guess the song title and artist before time runs out.',
         },
         {
-          icon: '🏆',
+          icon: 'trophy',
           title: 'See who wins',
           desc: 'Points are awarded for correct guesses. The scoreboard reveals the ultimate music nerd.',
         },
       ],
       features: [
         {
-          icon: '⚡',
+          icon: 'zap',
           title: 'Real-time multiplayer',
           desc: 'Play with friends instantly via shared link or QR code. No app download needed.',
         },
         {
-          icon: '🎛️',
+          icon: 'sliders',
           title: 'Customizable rounds',
           desc: "Pick genres, decades, and obscurity levels to match your group's vibe.",
         },
         {
-          icon: '📱',
+          icon: 'smartphone',
           title: 'Works everywhere',
           desc: 'Play on any device with a browser. Desktop, tablet, or phone.',
         },
         {
-          icon: '🔊',
+          icon: 'volume',
           title: 'Powered by Apple Music',
           desc: 'High-quality audio streamed from Apple Music.',
           hasAffiliate: true,
@@ -254,6 +262,34 @@ export default {
     },
   },
   methods: {
+    iconSvg(name) {
+      const s = (d) =>
+        `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+      const icons = {
+        headphones: s(
+          '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5z"/>'
+        ),
+        music: s(
+          '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+        ),
+        trophy: s(
+          '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>'
+        ),
+        zap: s(
+          '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'
+        ),
+        sliders: s(
+          '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>'
+        ),
+        smartphone: s(
+          '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>'
+        ),
+        volume: s(
+          '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
+        ),
+      };
+      return icons[name] || '';
+    },
     async fetchGameCount() {
       try {
         const res = await fetch(`${this.apiUrl}/api/game-count`);

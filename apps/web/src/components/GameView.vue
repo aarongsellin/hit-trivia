@@ -15,8 +15,8 @@
       @click="toggleMute"
       :title="musicMuted ? 'Unmute music' : 'Mute music'"
     >
-      <span v-if="musicMuted">🔇</span>
-      <span v-else>🔊</span>
+      <span v-if="musicMuted"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></span>
+      <span v-else><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
     </button>
 
     <!-- DEBUG: Uncomment for development
@@ -36,20 +36,10 @@
     </div>
     -->
 
-    <!-- Blocked from joining -->
-    <div v-if="joinBlocked" class="name-entry-phase">
-      <div class="name-entry-container">
-        <div class="name-entry-icon">🚫</div>
-        <h2>Can't join</h2>
-        <p class="name-entry-subtitle">{{ joinBlockedMessage }}</p>
-        <a href="/"><button class="name-submit-btn">Back to Home</button></a>
-      </div>
-    </div>
-
     <!-- Name Entry Screen -->
-    <div v-else-if="!playerName" class="name-entry-phase">
+    <div v-if="!playerName && !waitingForServer" class="name-entry-phase">
       <div class="name-entry-container">
-        <div class="name-entry-icon">♫</div>
+        <div class="name-entry-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <h2>Join the game</h2>
         <p class="name-entry-subtitle">Enter your name to get started</p>
         <input
@@ -124,6 +114,7 @@
       :track="currentTrack"
       :musicDuration="musicDuration"
       :guessResult="guessResult"
+      :muted="musicMuted"
     />
 
     <FinishedPhase
@@ -186,13 +177,14 @@ export default {
     return {
       messages: [],
       inputMessage: '',
-      playerId: localStorage.getItem('playerId') || null,
-      playerName: localStorage.getItem('playerName') || null,
-      nameInput: localStorage.getItem('playerName') || '',
+      playerId: null,
+      playerName: null,
+      nameInput: '',
       isAdmin: null,
       socket: null,
       gameState: null,
       gameId: null,
+      waitingForServer: false,
       countdown: null,
       gameUrl: '',
 
@@ -222,12 +214,8 @@ export default {
       // Final scores for the finished phase
       finalScores: null,
 
-      // Whether the player was blocked from joining
-      joinBlocked: false,
-      joinBlockedMessage: '',
-
       // Music mute state — muted by default for non-host players
-      musicMuted: true,
+      musicMuted: true, // overridden in created() from localStorage
     };
   },
   created: function () {
@@ -247,15 +235,26 @@ export default {
     const route = useRoute();
     this.router = useRouter();
     this.gameId = route.query.id;
-    this.gameUrl = `${window.location.origin}?id=${this.gameId}`;
+    this.playerId = localStorage.getItem(`playerId_${this.gameId}`) || null;
+    this.waitingForServer = !!this.playerId;
+
+    // Restore mute preference for this game
+    const storedMute = localStorage.getItem(`musicMuted_${this.gameId}`);
+    if (storedMute !== null) {
+      this.musicMuted = storedMute === 'true';
+    }
+
+    this.gameUrl = `${window.location.origin}/game?id=${this.gameId}`;
 
     this.socket = useWebSocket(
       `${wsProtocol}://${wsHost}/ws/game/${this.gameId}`,
       {
         autoReconnect: true,
         onConnected: () => {
-          // Only auto-join if we already have a name (e.g. reconnect/refresh)
-          if (this.playerName) {
+          // If we have a stored playerId, attempt to rejoin and let the
+          // server send back the playerName. Otherwise wait for the user
+          // to enter a name.
+          if (this.playerId) {
             this.handlePlayerJoin();
           }
         },
@@ -282,9 +281,6 @@ export default {
     },
   },
   beforeUnmount() {
-    // Clear playerName so the next game shows the name entry screen.
-    // This does NOT fire on page refresh, so reconnect keeps the stored name.
-    localStorage.removeItem('playerName');
     if (this.progressInterval) {
       clearInterval(this.progressInterval);
     }
@@ -299,13 +295,14 @@ export default {
       this.playerId = null;
       this.playerName = null;
       this.nameInput = '';
-      localStorage.removeItem('playerId');
-      localStorage.removeItem('playerName');
+      localStorage.removeItem(`playerId_${this.gameId}`);
+      localStorage.removeItem(`musicMuted_${this.gameId}`);
       this.isAdmin = false;
       this.gameState = null;
     },
     toggleMute() {
       this.musicMuted = !this.musicMuted;
+      localStorage.setItem(`musicMuted_${this.gameId}`, this.musicMuted);
     },
     unlockAudio() {
       // Play a tiny silent WAV to unlock the browser's autoplay policy.
@@ -334,13 +331,12 @@ export default {
       if (!name) return;
       this.unlockAudio();
       this.playerName = name;
-      localStorage.setItem('playerName', name);
       this.handlePlayerJoin();
     },
     handlePlayerJoin() {
       const toSend = JSON.stringify({
         type: 'data',
-        playerId: localStorage.getItem('playerId') || null,
+        playerId: this.playerId,
         playerName: this.playerName,
       });
 
@@ -382,6 +378,14 @@ export default {
     handlePlayAgain() {
       console.log('Play again clicked');
       // Reset game or navigate back to lobby
+    },
+    requestTracks() {
+      this.socket.send(
+        JSON.stringify({
+          type: 'data',
+          action: { type: 'requestTracks' },
+        })
+      );
     },
     startPhaseCountdown(newPhase, startTimestamp, endTimestamp) {
       // Clear any existing interval
@@ -458,7 +462,18 @@ export default {
               case 'playerId':
                 if (!isAboutUs) break; // not our data — ignore
                 this.playerId = element;
-                localStorage.setItem('playerId', this.playerId);
+                localStorage.setItem(`playerId_${this.gameId}`, this.playerId);
+                // If the server sent a new playerId without playerName,
+                // this is a new-player assignment — stop waiting so the
+                // name entry screen appears.
+                if (!parsed.playerName) {
+                  this.waitingForServer = false;
+                }
+                break;
+              case 'playerName':
+                if (!isAboutUs) break;
+                this.playerName = element;
+                this.waitingForServer = false;
                 break;
               case 'admin':
                 if (!isAboutUs) break; // not our data — ignore
@@ -466,6 +481,7 @@ export default {
                 // Host plays music by default; guests are muted
                 if (element === true) {
                   this.musicMuted = false;
+                  localStorage.setItem(`musicMuted_${this.gameId}`, 'false');
                 }
                 break;
               case 'gameState':
@@ -475,10 +491,25 @@ export default {
                 if (element === 'PLAYING_MUSIC' && !this.musicPhaseStartTime) {
                   this.musicPhaseStartTime = Date.now();
                 }
+                // If we landed in a phase that needs tracks but have none, request them
+                if (
+                  ['PLAYING_MUSIC', 'GUESSING', 'REVEAL'].includes(element) &&
+                  (!this.tracks || this.tracks.length === 0)
+                ) {
+                  this.requestTracks();
+                }
                 break;
               case 'phase': {
                 const newPhase = element.newPhase;
                 this.gameState = newPhase;
+
+                // If we enter a music phase without tracks, request them
+                if (
+                  ['PLAYING_MUSIC', 'GUESSING', 'REVEAL'].includes(newPhase) &&
+                  (!this.tracks || this.tracks.length === 0)
+                ) {
+                  this.requestTracks();
+                }
 
                 // Track when PLAYING_MUSIC phase starts
                 if (newPhase === 'PLAYING_MUSIC') {
@@ -541,6 +572,8 @@ export default {
                 localStorage.removeItem(
                   `guess_${this.gameId}_${this.currentRound}`
                 );
+                // Clear mute preference at game end
+                localStorage.removeItem(`musicMuted_${this.gameId}`);
                 console.log('Final scores:', element);
                 break;
               case 'currentRound':
@@ -558,10 +591,10 @@ export default {
 
         if (type === 'error') {
           console.log('received error:', parsed);
-          if (parsed?.code === 'GAME_ALREADY_STARTED') {
-            this.joinBlocked = true;
-            this.joinBlockedMessage =
-              parsed?.message || 'This game has already started.';
+          this.waitingForServer = false;
+          if (parsed?.code === 'GAME_FINISHED') {
+            // Game is over — redirect home
+            this.router.replace('/');
           } else if (
             parsed?.message &&
             parsed.message.includes('does not exist')

@@ -8,6 +8,7 @@
         <video
           ref="videoPlayer"
           :src="track.musicVideoUrl"
+          :muted="muted"
           autoplay
           playsinline
           @error="videoError = true"
@@ -22,6 +23,7 @@
           v-if="track?.previewUrl"
           ref="audioPlayer"
           :src="track.previewUrl"
+          :muted="muted"
           autoplay
         ></audio>
       </div>
@@ -42,27 +44,21 @@
             :class="{ correct: guessResult.titleScore > 0 }"
           >
             <span class="score-label">Title</span>
-            <span class="score-icon">{{
-              guessResult.titleScore > 0 ? '✓' : '✗'
-            }}</span>
+            <span class="score-icon"><svg v-if="guessResult.titleScore > 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
           </div>
           <div
             class="score-row"
             :class="{ correct: guessResult.artistScore > 0 }"
           >
             <span class="score-label">Artist</span>
-            <span class="score-icon">{{
-              guessResult.artistScore > 0 ? '✓' : '✗'
-            }}</span>
+            <span class="score-icon"><svg v-if="guessResult.artistScore > 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
           </div>
           <div
             class="score-row"
             :class="{ correct: guessResult.albumScore > 0 }"
           >
             <span class="score-label">Album</span>
-            <span class="score-icon">{{
-              guessResult.albumScore > 0 ? '✓' : '✗'
-            }}</span>
+            <span class="score-icon"><svg v-if="guessResult.albumScore > 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
           </div>
           <div class="score-total">
             <span>Round Score</span>
@@ -91,6 +87,10 @@ export default {
       type: Number,
       default: 0,
     },
+    muted: {
+      type: Boolean,
+      default: false,
+    },
     guessResult: {
       type: Object,
       default: null,
@@ -100,6 +100,14 @@ export default {
     return {
       videoError: false,
     };
+  },
+  watch: {
+    muted(val) {
+      const video = this.$refs.videoPlayer;
+      if (video) video.muted = val;
+      const audio = this.$refs.audioPlayer;
+      if (audio) audio.muted = val;
+    },
   },
   beforeUnmount() {
     const video = this.$refs.videoPlayer;

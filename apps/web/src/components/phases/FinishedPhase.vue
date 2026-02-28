@@ -1,59 +1,114 @@
 <template>
   <div class="finished-phase">
     <div class="finished-container">
-      <div class="trophy">🏆</div>
       <h2>Game Over!</h2>
+      <p class="rounds-label" v-if="finalScores">{{ finalScores.totalRounds }} rounds</p>
 
       <div v-if="finalScores" class="final-scores">
-        <div class="scores-header">
-          <h3>Final Scores</h3>
-          <span class="rounds-label">{{ finalScores.totalRounds }} rounds</span>
-        </div>
-
-        <div class="scoreboard">
+        <!-- Podium for top 3 -->
+        <div class="podium">
+          <!-- 2nd place (left) -->
           <div
-            v-for="entry in finalScores.scoreboard"
-            :key="entry.playerId"
-            class="score-entry"
-            :class="{
-              'score-entry--you': entry.playerId === playerId,
-              'score-entry--first': entry.rank === 1,
-              'score-entry--second': entry.rank === 2,
-              'score-entry--third': entry.rank === 3,
-            }"
+            v-if="podiumPlayers[1]"
+            class="podium-slot podium-slot--second"
+            :class="{ 'podium-slot--you': podiumPlayers[1].playerId === playerId }"
           >
-            <div class="score-rank">
-              <span v-if="entry.rank === 1" class="rank-medal">🥇</span>
-              <span v-else-if="entry.rank === 2" class="rank-medal">🥈</span>
-              <span v-else-if="entry.rank === 3" class="rank-medal">🥉</span>
-              <span v-else class="rank-number">#{{ entry.rank }}</span>
+            <div class="podium-medal">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <circle cx="18" cy="14" r="12" fill="#94a3b8" />
+                <circle cx="18" cy="14" r="9" fill="#cbd5e1" />
+                <text x="18" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="#475569">2</text>
+                <path d="M12 24l6 10 6-10" fill="#94a3b8" />
+              </svg>
             </div>
+            <div class="podium-name">
+              {{ podiumPlayers[1].name }}
+              <span v-if="podiumPlayers[1].playerId === playerId" class="you-badge">you</span>
+            </div>
+            <div class="podium-score">{{ podiumPlayers[1].score }}</div>
+            <div class="podium-block podium-block--second"></div>
+          </div>
+          <div v-else class="podium-slot podium-slot--second podium-slot--empty">
+            <div class="podium-block podium-block--second"></div>
+          </div>
 
-            <div class="score-name">
-              {{ entry.playerId === playerId ? 'You' : entry.name }}
-              <span v-if="entry.playerId === playerId" class="you-badge"
-                >★</span
-              >
+          <!-- 1st place (center) -->
+          <div
+            v-if="podiumPlayers[0]"
+            class="podium-slot podium-slot--first"
+            :class="{ 'podium-slot--you': podiumPlayers[0].playerId === playerId }"
+          >
+            <div class="podium-medal">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <circle cx="22" cy="16" r="14" fill="#f59e0b" />
+                <circle cx="22" cy="16" r="10.5" fill="#fbbf24" />
+                <text x="22" y="20.5" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">1</text>
+                <path d="M14 28l8 14 8-14" fill="#f59e0b" />
+              </svg>
             </div>
+            <div class="podium-name">
+              {{ podiumPlayers[0].name }}
+              <span v-if="podiumPlayers[0].playerId === playerId" class="you-badge">you</span>
+            </div>
+            <div class="podium-score">{{ podiumPlayers[0].score }}</div>
+            <div class="podium-block podium-block--first"></div>
+          </div>
+          <div v-else class="podium-slot podium-slot--first podium-slot--empty">
+            <div class="podium-block podium-block--first"></div>
+          </div>
 
-            <div class="score-bar-container">
-              <div
-                class="score-bar"
-                :style="{
-                  width:
-                    finalScores.maxScore > 0
-                      ? (entry.score / finalScores.maxScore) * 100 + '%'
-                      : '0%',
-                }"
-              ></div>
+          <!-- 3rd place (right) -->
+          <div
+            v-if="podiumPlayers[2]"
+            class="podium-slot podium-slot--third"
+            :class="{ 'podium-slot--you': podiumPlayers[2].playerId === playerId }"
+          >
+            <div class="podium-medal">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <circle cx="18" cy="14" r="12" fill="#b45309" />
+                <circle cx="18" cy="14" r="9" fill="#d97706" />
+                <text x="18" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">3</text>
+                <path d="M12 24l6 10 6-10" fill="#b45309" />
+              </svg>
             </div>
-
-            <div class="score-value">
-              {{ entry.score
-              }}<span class="score-max"> / {{ finalScores.maxScore }}</span>
+            <div class="podium-name">
+              {{ podiumPlayers[2].name }}
+              <span v-if="podiumPlayers[2].playerId === playerId" class="you-badge">you</span>
             </div>
+            <div class="podium-score">{{ podiumPlayers[2].score }}</div>
+            <div class="podium-block podium-block--third"></div>
+          </div>
+          <div v-else class="podium-slot podium-slot--third podium-slot--empty">
+            <div class="podium-block podium-block--third"></div>
           </div>
         </div>
+
+        <!-- Remaining players table -->
+        <table v-if="remainingPlayers.length" class="rest-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-name">Player</th>
+              <th class="col-score">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="entry in remainingPlayers"
+              :key="entry.playerId"
+              :class="{ 'row--you': entry.playerId === playerId }"
+            >
+              <td class="col-rank">{{ entry.rank }}</td>
+              <td class="col-name">
+                {{ entry.name }}
+                <span v-if="entry.playerId === playerId" class="you-badge">you</span>
+              </td>
+              <td class="col-score">
+                {{ entry.score }}<span class="score-max"> / {{ finalScores.maxScore }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div v-else class="loading-scores">
@@ -79,6 +134,16 @@ export default {
     },
   },
   emits: ['play-again'],
+  computed: {
+    podiumPlayers() {
+      if (!this.finalScores?.scoreboard) return [];
+      return this.finalScores.scoreboard.filter((e) => e.rank <= 3);
+    },
+    remainingPlayers() {
+      if (!this.finalScores?.scoreboard) return [];
+      return this.finalScores.scoreboard.filter((e) => e.rank > 3);
+    },
+  },
 };
 </script>
 
@@ -100,135 +165,159 @@ export default {
   max-width: 580px;
 }
 
-.trophy {
-  font-size: 48px;
-  margin-bottom: 8px;
-}
-
 .finished-container h2 {
-  margin: 0 0 32px 0;
+  margin: 0 0 4px 0;
   color: #1a1a1a;
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.5px;
 }
 
-.final-scores {
-  margin-bottom: 32px;
-  text-align: left;
-}
-
-.scores-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.scores-header h3 {
-  margin: 0;
-  color: #1a1a1a;
-  font-size: 17px;
-  font-weight: 700;
-}
-
 .rounds-label {
   font-size: 13px;
   color: #9ca3af;
   font-weight: 500;
+  margin: 0 0 28px 0;
 }
 
-.scoreboard {
+.final-scores {
+  margin-bottom: 32px;
+}
+
+/* ─── Podium ─────────────────────────────────── */
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+
+.podium-slot {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  width: 120px;
 }
 
-.score-entry {
+.podium-slot--empty {
+  /* Reserve space even if fewer than 3 players */
+  visibility: hidden;
+}
+
+.podium-medal {
+  margin-bottom: 6px;
+}
+
+.podium-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: #fafafa;
-  border: 1px solid #f3f4f6;
-  transition: all 0.2s ease;
+  justify-content: center;
+  gap: 4px;
 }
 
-.score-entry--you {
-  background: #f0f9ff;
-  border-color: #bae6fd;
+.podium-score {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 8px;
 }
 
-.score-entry--first {
-  background: #fffbeb;
-  border-color: #fde68a;
+.podium-block {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  min-height: 20px;
 }
 
-.score-entry--first.score-entry--you {
-  background: linear-gradient(135deg, #fffbeb 0%, #f0f9ff 100%);
-  border-color: #fde68a;
+.podium-block--first {
+  height: 100px;
+  background: linear-gradient(180deg, #fde68a 0%, #f59e0b 100%);
 }
 
-.score-rank {
-  flex-shrink: 0;
-  width: 32px;
-  text-align: center;
+.podium-block--second {
+  height: 72px;
+  background: linear-gradient(180deg, #e2e8f0 0%, #94a3b8 100%);
 }
 
-.rank-medal {
-  font-size: 22px;
+.podium-block--third {
+  height: 52px;
+  background: linear-gradient(180deg, #fde68a 0%, #b45309 100%);
 }
 
-.rank-number {
+.podium-slot--you .podium-name {
+  color: #2563eb;
+}
+
+/* ─── Remaining players table ────────────────── */
+.rest-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
   font-size: 14px;
+}
+
+.rest-table thead th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  font-weight: 600;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.rest-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.rest-table tbody td {
+  padding: 10px 12px;
+  color: #374151;
+}
+
+.rest-table .col-rank {
+  width: 40px;
   font-weight: 700;
   color: #9ca3af;
 }
 
-.score-name {
-  flex-shrink: 0;
-  width: 90px;
-  font-size: 14px;
+.rest-table .col-name {
   font-weight: 600;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+}
+
+.rest-table .col-score {
+  text-align: right;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.row--you td {
+  background: #f0f9ff;
+}
+
+.row--you .col-name {
+  color: #2563eb;
 }
 
 .you-badge {
-  color: #2563eb;
-  font-size: 12px;
-}
-
-.score-bar-container {
-  flex: 1;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.score-bar {
-  height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #e11d48, #9333ea);
-  transition: width 0.8s ease;
-  min-width: 2px;
-}
-
-.score-entry--first .score-bar {
-  background: linear-gradient(90deg, #f59e0b, #ef4444);
-}
-
-.score-value {
-  flex-shrink: 0;
-  font-size: 16px;
+  display: inline-block;
+  font-size: 10px;
   font-weight: 700;
-  color: #1a1a1a;
-  min-width: 60px;
-  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #2563eb;
+  background: #dbeafe;
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-left: 2px;
 }
 
 .score-max {
@@ -273,14 +362,29 @@ export default {
     padding: 32px 20px;
   }
 
-  .score-name {
-    width: 70px;
-    font-size: 13px;
+  .podium-slot {
+    width: 100px;
   }
 
-  .score-value {
-    min-width: 50px;
-    font-size: 14px;
+  .podium-name {
+    font-size: 12px;
+    max-width: 90px;
+  }
+
+  .podium-score {
+    font-size: 16px;
+  }
+
+  .podium-block--first {
+    height: 80px;
+  }
+
+  .podium-block--second {
+    height: 56px;
+  }
+
+  .podium-block--third {
+    height: 40px;
   }
 }
 </style>
