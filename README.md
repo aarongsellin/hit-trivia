@@ -66,7 +66,7 @@ The multi-stage Dockerfile builds the Vue frontend, packages it into the Spring 
 
 **Server-authoritative timing** - All phase countdowns use server timestamps. Clients compute progress bars from `startTimestamp` / `endTimestamp`, so even a page reload shows the correct remaining time.
 
-**Reconnect-first** - Player ID and name are stored in localStorage. On page reload, the client auto-reconnects to the WebSocket and the server sends the full current game state (phase, tracks, round, scores). The experience is seamless.
+**Reconnect-first** - Player ID stored in localStorage. On page reload, the client auto-reconnects to the WebSocket and the server sends the full current game state (phase, tracks, round, scores). The experience is seamless.
 
 **Mute by default for guests** - Only the host plays music out loud by default. Other players are muted to avoid cacophony in the same room. Everyone can toggle with the floating speaker button.
 
