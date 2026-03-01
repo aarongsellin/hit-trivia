@@ -38,6 +38,7 @@ cd apps/web && npm install && cd ../..
 # Run both frontend and backend in parallel
 npm run dev
 ```
+*Ensure that [Java 21](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) is installed and [Maven](https://maven.apache.org/)*
 
 The frontend dev server runs on `http://localhost:3000` and the backend on `http://localhost:8080`.
 
@@ -50,6 +51,13 @@ The frontend dev server runs on `http://localhost:3000` and the backend on `http
 | `APPLE_PRIVATE_KEY` | MusicKit private key (PKCS8)               | —                       |
 | `ALLOWED_ORIGINS`   | CORS allowed origins (comma-separated)     | `http://localhost:3000` |
 | `PORT`              | Server port (set automatically by Railway) | `8080`                  |
+
+Create a `application-local.properties` file in the resources folder in backend/src/main and add the Apple WebKit secrets in this manner:
+```
+apple.music.team-id=1234asdf
+apple.music.key-id=1234asdf
+apple.music.private-key=1234asdf
+```
 
 ## Docker
 
