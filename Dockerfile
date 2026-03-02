@@ -3,9 +3,6 @@ FROM node:20-alpine AS frontend-build
 
 WORKDIR /app
 
-# Copy root package.json (needed for the @org/source file:../.. dependency)
-COPY package.json ./
-
 # Copy web app package files and install dependencies
 COPY apps/web/package.json apps/web/package-lock.json* apps/web/
 RUN cd apps/web && npm install

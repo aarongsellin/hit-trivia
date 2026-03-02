@@ -280,6 +280,7 @@ export default {
     this.socket = useWebSocket(
       `${wsProtocol}://${wsHost}/ws/game/${this.gameId}`,
       {
+        immediate: true,
         autoReconnect: true,
         onConnected: () => {
           // If we have a stored playerId, attempt to rejoin and let the
@@ -291,8 +292,6 @@ export default {
         },
       }
     );
-
-    this.socket.open();
   },
   computed: {
     musicSeekOffset() {
