@@ -45,15 +45,16 @@ The frontend dev server runs on `http://localhost:3000` and the backend on `http
 
 ### Environment Variables
 
-| Variable            | Description                                | Default                 |
-| ------------------- | ------------------------------------------ | ----------------------- |
-| `APPLE_TEAM_ID`     | Apple Developer Team ID                    | —                       |
-| `APPLE_KEY_ID`      | MusicKit private key ID                    | —                       |
-| `APPLE_PRIVATE_KEY` | MusicKit private key (PKCS8)               | —                       |
-| `ALLOWED_ORIGINS`   | CORS allowed origins (comma-separated)     | `http://localhost:3000` |
-| `PORT`              | Server port (set automatically by Railway) | `8080`                  |
+| Variable                  | Description                                | Default                 |
+| ------------------------- | ------------------------------------------ | ----------------------- |
+| `APPLE_MUSIC_TEAM_ID`     | Apple Developer Team ID                    | —                       |
+| `APPLE_MUSIC_KEY_ID`      | MusicKit private key ID                    | —                       |
+| `APPLE_MUSIC_PRIVATE_KEY` | MusicKit private key (PKCS8, Base64)       | —                       |
+| `ALLOWED_ORIGINS`         | CORS allowed origins (comma-separated)     | `http://localhost:3000` |
+| `SPRING_PROFILES_ACTIVE`  | Spring profile (`local` / `production`)    | `local`                 |
+| `PORT`                    | Server port (set automatically by Railway) | `8080`                  |
 
-Create a `application-local.properties` file in `backend/src/main/resources` and add the secrets in this manner:
+For local development, create `apps/backend/src/main/resources/application-local.properties` with your Apple credentials:
 
 ```
 apple.music.team-id=1234asdf
@@ -63,10 +64,13 @@ apple.music.private-key=1234asdf
 
 ## Docker
 
+Uses the same `application-local.properties` you already have for local development — no extra config needed.
+
 ```bash
-# Build and run locally
 docker compose up --build
 ```
+
+Open `http://localhost:8080`. The Vue frontend and backend API are served from the same origin.
 
 The multi-stage Dockerfile builds the Vue frontend, packages it into the Spring Boot static resources, and produces a minimal JRE image.
 
@@ -149,7 +153,7 @@ flowchart LR
 
     subgraph Env ["Runtime Environment"]
         PORT["PORT (Railway)"]
-        APPLE["APPLE_TEAM_ID<br>APPLE_KEY_ID<br>APPLE_PRIVATE_KEY"]
+        APPLE["APPLE_MUSIC_TEAM_ID<br>APPLE_MUSIC_KEY_ID<br>APPLE_MUSIC_PRIVATE_KEY"]
         ORIGINS["ALLOWED_ORIGINS"]
     end
 
