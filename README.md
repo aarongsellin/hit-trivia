@@ -38,7 +38,8 @@ cd apps/web && npm install && cd ../..
 # Run both frontend and backend in parallel
 npm run dev
 ```
-*Ensure that [Java 21](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) is installed and [Maven](https://maven.apache.org/)*
+
+_Ensure that [Java 21](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) is installed and [Maven](https://maven.apache.org/)_
 
 The frontend dev server runs on `http://localhost:3000` and the backend on `http://localhost:8080`.
 
@@ -53,6 +54,7 @@ The frontend dev server runs on `http://localhost:3000` and the backend on `http
 | `PORT`              | Server port (set automatically by Railway) | `8080`                  |
 
 Create a `application-local.properties` file in the resources folder in backend/src/main and add the Apple WebKit secrets in this manner:
+
 ```
 apple.music.team-id=1234asdf
 apple.music.key-id=1234asdf
@@ -136,13 +138,13 @@ flowchart LR
         Trigger[Deploy trigger<br>railway.toml]
         subgraph Docker ["Multi-stage Dockerfile"]
             direction TB
-            S1["Stage 1: node:20-alpine<br>npm install → vue-cli-service build<br>→ /app/apps/web/dist"]
-            S2["Stage 2: maven:3.9-temurin-21<br>Copy dist → static/<br>mvn package → fat JAR"]
-            S3["Stage 3: temurin:21-jre-alpine<br>COPY app.jar<br>java -jar app.jar"]
+            S1["Stage 1: node<br>npm install -> vue-cli-service build<br> -> /app/apps/web/dist"]
+            S2["Stage 2: maven<br>Copy dist -> static/<br>mvn package -> fat JAR"]
+            S3["Stage 3: temurin<br>COPY app.jar<br>java -jar app.jar"]
             S1 --> S2 --> S3
         end
         Health["Healthcheck<br>GET /api/game-count<br>timeout: 30 s"]
-        Restart["Restart policy<br>ON_FAILURE × 3"]
+        Restart["Restart policy<br>ON_FAILURE x 3"]
     end
 
     subgraph Env ["Runtime Environment"]
