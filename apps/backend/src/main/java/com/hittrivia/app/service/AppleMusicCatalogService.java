@@ -204,10 +204,15 @@ public class AppleMusicCatalogService {
      * and set the musicVideoUrl (video preview) if found.
      */
     public List<Track> enrichWithMusicVideos(List<Track> tracks, String storefront) {
-        List<Track> enriched = new ArrayList<>();
-        for (Track track : tracks) {
-            String videoUrl = findMusicVideoPreview(track.title(), track.artist(), storefront);
-            enriched.add(new Track(
+        return tracks.parallelStream()
+            .map(track -> {
+                String videoUrl = findMusicVideoPreview(
+                    track.title(),
+                    track.artist(),
+                    storefront
+                );
+
+                return new Track(
                     track.title(),
                     track.artist(),
                     track.album(),
@@ -216,9 +221,9 @@ public class AppleMusicCatalogService {
                     videoUrl != null ? videoUrl : "",
                     track.startTimeSeconds(),
                     track.releaseYear()
-            ));
-        }
-        return enriched;
+                );
+            })
+            .toList();
     }
 
     /**
