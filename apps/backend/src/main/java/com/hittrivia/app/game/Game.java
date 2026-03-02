@@ -168,18 +168,19 @@ public class Game {
         this.genre = configuration.has("genre") ? configuration.get("genre").asText(null) : null;
         this.decade = configuration.has("decade") ? configuration.get("decade").asText(null) : null;
 
+        // Fetch tracks from Apple Music (blocking API call)
         quizz.loadTracks(configuration, catalogService);
 
-        broadcastMessage(MessageType.DATA, Map.of("tracks", quizz.getTracks()));
-
-        // Send initial round info
-        broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
-
-        // We have to tell the clients that we are in the waiting phase right now.
+        // Move to the WAITING phase first so clients show the lobby
+        this.phase = Phase.WAITING;
         broadcastMessage(MessageType.DATA, Map.of("phase", Map.of("newPhase", Phase.WAITING)));
 
-        // Tell the clients that the music phase begins in x seconds.
-        startPhaseWithTimer(Phase.PLAYING_MUSIC, 3);
+        // Now send tracks and round info — clients can start preloading audio
+        broadcastMessage(MessageType.DATA, Map.of("tracks", quizz.getTracks()));
+        broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
+
+        // Start the countdown AFTER tracks have been sent
+        startPhaseWithTimer(Phase.PLAYING_MUSIC, PhaseDelays.WAIT_DELAY);
     }
 
     /*
@@ -250,7 +251,7 @@ public class Game {
             case REVEAL -> {
                 int nextRound = currentRound + 1;
                 if (nextRound < quizz.getTracks().size()) {
-                    yield new int[]{ Phase.WAITING.ordinal(), 5 };
+                    yield new int[]{ Phase.WAITING.ordinal(), PhaseDelays.REVEAL_DELAY };
                 } else {
                     yield new int[]{ Phase.FINISHED.ordinal(), PhaseDelays.REVEAL_DELAY };
                 }
@@ -280,14 +281,15 @@ public class Game {
                 broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
                 currentRound++;
                 if (currentRound < quizz.getTracks().size()) {
-                    startPhaseWithTimer(Phase.WAITING, 5);
+                    startPhaseWithTimer(Phase.WAITING, PhaseDelays.REVEAL_DELAY);
                 } else {
                     startPhaseWithTimer(Phase.FINISHED, PhaseDelays.REVEAL_DELAY);
                 }
                 break;
             case FINISHED:
                 broadcastFinalScores();
-                cleanup();
+                // Schedule cleanup after FINISHED_DELAY so players can view scores
+                scheduler.schedule(this::cleanup, PhaseDelays.FINISHED_DELAY, TimeUnit.SECONDS);
                 break;
         }
     }
@@ -376,10 +378,10 @@ public class Game {
     }
 
     public static class PhaseDelays {
-        private static final int MUSIC_DELAY = 15;  
+        private static final int MUSIC_DELAY = 30;  
         private static final int GUESS_DELAY = 30;
-        private static final int REVEAL_DELAY = 15;
-        private static final int WAIT_DELAY = 3;
+        private static final int REVEAL_DELAY = 30;
+        private static final int WAIT_DELAY = 10;
 
         private static final int FINISHED_DELAY = 120;
     }
