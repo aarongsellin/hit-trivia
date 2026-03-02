@@ -68,6 +68,96 @@ docker compose up --build
 
 The multi-stage Dockerfile builds the Vue frontend, packages it into the Spring Boot static resources, and produces a minimal JRE image.
 
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client ["Browser (Vue 3)"]
+        UI[Vue Components]
+        WS_C[WebSocket Client<br>@vueuse/core]
+        Audio[Audio Player<br>preloads clips]
+    end
+
+    subgraph Server ["Spring Boot 4 (Java 21)"]
+        direction TB
+        REST[REST Controller<br>/api/new-game<br>/api/game-count<br>/api/active-games]
+        WSH[GameSocketHandler<br>/ws/game/room-id]
+        GS[GameService<br>manages rooms]
+        Game[Game Engine<br>phase machine & scoring]
+        AMS[AppleMusicCatalogService<br>search & filter tracks]
+        Token[AppleMusicTokenService<br>ES256 JWT generation]
+    end
+
+    subgraph Apple ["Apple Music API"]
+        Catalog[Catalog Search<br>/v1/catalog/us/search]
+        MV[Music Videos<br>/v1/catalog/us/music-videos]
+    end
+
+    UI -- "HTTP GET" --> REST
+    UI <-- "WebSocket (JSON)" --> WS_C
+    WS_C <-- "WebSocket" --> WSH
+    WSH --> GS
+    GS --> Game
+    Game -- "fetch tracks on game start" --> AMS
+    AMS -- "JWT Bearer token" --> Token
+    AMS -- "search songs" --> Catalog
+    AMS -- "enrich with videos" --> MV
+    Game -- "tracks + phase changes" --> WSH
+    WSH -- "broadcast to room" --> WS_C
+    WS_C -- "preview URLs" --> Audio
+```
+
+### Game Phase Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> WAITING_CONFIG: Host creates game
+    WAITING_CONFIG --> WAITING: Host submits config<br>(tracks fetched from Apple Music)
+
+    WAITING --> PLAYING_MUSIC: 3 s countdown
+    PLAYING_MUSIC --> GUESSING: 15 s clip plays
+    GUESSING --> REVEAL: 30 s to guess
+    REVEAL --> WAITING: 15 s scores shown<br>(next round)
+    REVEAL --> FINISHED: Last round revealed
+
+    FINISHED --> [*]: 120 s auto-cleanup
+```
+
+## Deployment
+
+```mermaid
+flowchart LR
+    subgraph Dev ["Developer"]
+        Push[git push]
+    end
+
+    subgraph Railway ["Railway"]
+        direction TB
+        Trigger[Deploy trigger<br>railway.toml]
+        subgraph Docker ["Multi-stage Dockerfile"]
+            direction TB
+            S1["Stage 1: node:20-alpine<br>npm install → vue-cli-service build<br>→ /app/apps/web/dist"]
+            S2["Stage 2: maven:3.9-temurin-21<br>Copy dist → static/<br>mvn package → fat JAR"]
+            S3["Stage 3: temurin:21-jre-alpine<br>COPY app.jar<br>java -jar app.jar"]
+            S1 --> S2 --> S3
+        end
+        Health["Healthcheck<br>GET /api/game-count<br>timeout: 30 s"]
+        Restart["Restart policy<br>ON_FAILURE × 3"]
+    end
+
+    subgraph Env ["Runtime Environment"]
+        PORT["PORT (Railway)"]
+        APPLE["APPLE_TEAM_ID<br>APPLE_KEY_ID<br>APPLE_PRIVATE_KEY"]
+        ORIGINS["ALLOWED_ORIGINS"]
+    end
+
+    Push --> Trigger
+    Trigger --> Docker
+    S3 --> Health
+    S3 --> Restart
+    Env --> S3
+```
+
 ## Design Decisions
 
 **All tracks sent upfront** - When a game starts, every client receives the full track list. During each WAITING phase before PLAYING_MUSIC, the browser preloads the next audio clip so there's zero buffering.
