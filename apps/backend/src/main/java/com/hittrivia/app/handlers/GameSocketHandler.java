@@ -69,7 +69,9 @@ public class GameSocketHandler extends TextWebSocketHandler {
         GameWebSocketSession gameSession = sessionContexts.getOrDefault(session, null);
 
         if (gameSession == null) {
-            throw new Error("Could not find corresponding GameWebSocketSession");
+            // Session was already removed (e.g. game didn't exist and connection was closed)
+            System.out.println("Ignoring message for unknown session (already closed)");
+            return;
         }
 
         String payload = message.getPayload();

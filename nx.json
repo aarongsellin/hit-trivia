@@ -5,20 +5,5 @@
     "production": ["default"],
     "sharedGlobals": []
   },
-  "plugins": [
-    {
-      "plugin": "@nx/js/typescript",
-      "options": {
-        "typecheck": { "targetName": "typecheck" },
-        "build": {
-          "targetName": "build",
-          "configName": "tsconfig.lib.json",
-          "buildDepsName": "build-deps",
-          "watchDepsName": "watch-deps"
-        }
-      }
-    },
-    "@nx/maven"
-  ],
-  "nxCloudId": "69a0c5013ac24ad9008a670b"
+  "plugins": ["@nx/maven"]
 }
