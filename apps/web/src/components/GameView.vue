@@ -234,6 +234,8 @@ export default {
       phaseStartTime: null,
       progressPercentage: 0,
       progressInterval: null,
+      pendingPhase: null, // The next phase announced by the server
+      queuedPhaseChange: null, // Pre-sent next countdown from server
 
       // Configuration options
       selectedGenre: 'Pop',
@@ -421,6 +423,9 @@ export default {
         clearInterval(this.progressInterval);
       }
 
+      // Remember what phase we're counting down to
+      this.pendingPhase = newPhase;
+
       // Use the server's original start time to calculate total duration
       // so the bar shows the correct proportion even after a page reload
       this.phaseStartTime = startTimestamp;
@@ -456,7 +461,58 @@ export default {
         clearInterval(this.progressInterval);
       }
 
-      // Timer completed - backend will send the phase update message
+      // Switch to the announced phase immediately instead of waiting
+      // for the server's confirmation message (eliminates network delay).
+      // The server's 'phase' message will still arrive as a sync backup.
+      if (this.pendingPhase) {
+        this.applyPhaseSwitch(this.pendingPhase);
+        this.pendingPhase = null;
+      }
+
+      // If the server pre-sent the next countdown, start it immediately
+      // so there is zero gap between phases on the client.
+      if (this.queuedPhaseChange) {
+        const next = this.queuedPhaseChange;
+        this.queuedPhaseChange = null;
+        this.startPhaseCountdown(
+          next.newPhase,
+          next.startTimestamp,
+          next.endTimestamp
+        );
+      }
+    },
+    applyPhaseSwitch(newPhase) {
+      // Already in this phase (e.g. countdown already switched us) — skip
+      if (this.gameState === newPhase) return;
+
+      this.gameState = newPhase;
+
+      // If we enter a phase that needs tracks but have none, request them
+      if (
+        ['PLAYING_MUSIC', 'GUESSING', 'REVEAL'].includes(newPhase) &&
+        (!this.tracks || this.tracks.length === 0)
+      ) {
+        this.requestTracks();
+      }
+
+      // Track when PLAYING_MUSIC phase starts
+      if (newPhase === 'PLAYING_MUSIC') {
+        this.musicPhaseStartTime = Date.now();
+        this.guessResult = null;
+        this.preloadVideo();
+        // Clean up guess from previous round
+        if (this.currentRound > 0) {
+          localStorage.removeItem(
+            `guess_${this.gameId}_${this.currentRound - 1}`
+          );
+        }
+      }
+      // Calculate music duration when leaving PLAYING_MUSIC phase
+      else if (this.musicPhaseStartTime && newPhase !== 'PLAYING_MUSIC') {
+        this.musicDuration = Math.floor(
+          (Date.now() - this.musicPhaseStartTime) / 1000
+        );
+      }
     },
     handleMessage(data) {
       this.messages.push({
@@ -523,41 +579,14 @@ export default {
                 }
                 break;
               case 'phase': {
-                const newPhase = element.newPhase;
-                this.gameState = newPhase;
-
-                // If we enter a music phase without tracks, request them
-                if (
-                  ['PLAYING_MUSIC', 'GUESSING', 'REVEAL'].includes(newPhase) &&
-                  (!this.tracks || this.tracks.length === 0)
-                ) {
-                  this.requestTracks();
-                }
-
-                // Track when PLAYING_MUSIC phase starts
-                if (newPhase === 'PLAYING_MUSIC') {
-                  this.musicPhaseStartTime = Date.now();
-                  this.guessResult = null;
-                  this.preloadVideo();
-                  // Clean up guess from previous round
-                  if (this.currentRound > 0) {
-                    localStorage.removeItem(
-                      `guess_${this.gameId}_${this.currentRound - 1}`
-                    );
-                  }
-                }
-                // Calculate music duration when leaving PLAYING_MUSIC phase
-                else if (
-                  this.musicPhaseStartTime &&
-                  newPhase !== 'PLAYING_MUSIC'
-                ) {
-                  this.musicDuration = Math.floor(
-                    (Date.now() - this.musicPhaseStartTime) / 1000
-                  );
-                }
+                // Server confirmation of phase change — apply it.
+                // If the client already switched via countdown, this is a no-op.
+                this.applyPhaseSwitch(element.newPhase);
                 break;
               }
               case 'phaseChange':
+                // Store the look-ahead countdown if the server included one
+                this.queuedPhaseChange = element.nextPhaseChange || null;
                 this.startPhaseCountdown(
                   element.newPhase,
                   element.startTimestamp,

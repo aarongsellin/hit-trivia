@@ -195,19 +195,33 @@ public class Game {
 
         long startTimestamp = System.currentTimeMillis();
         long endTimestamp = startTimestamp + (durationSeconds * 1000);
-        // Pad the client-facing endTimestamp so the progress bar accounts
-        // for network latency — the bar finishes when the phase message arrives
-        long clientEndTimestamp = endTimestamp + PhaseDelays.NETWORK_BUFFER_MS;
         this.phaseStartTimestamp = startTimestamp;
-        this.phaseEndTimestamp = clientEndTimestamp;
+        this.phaseEndTimestamp = endTimestamp;
         this.nextPhase = newPhase;
 
-        broadcastMessage(MessageType.DATA, Map.of(
-            "phaseChange", Map.of(
-                "newPhase", newPhase.toString(),
-                "startTimestamp", startTimestamp,
-                "endTimestamp", clientEndTimestamp)
+        // Build the phaseChange payload, including a look-ahead so the
+        // client can chain the next countdown without waiting for a
+        // server round-trip.
+        Map<String, Object> phaseChangePayload = new java.util.HashMap<>(Map.of(
+            "newPhase", newPhase.toString(),
+            "startTimestamp", startTimestamp,
+            "endTimestamp", endTimestamp
         ));
+
+        int[] nextInfo = getNextPhaseDuration(newPhase);
+        if (nextInfo != null) {
+            // nextInfo[0] = next phase ordinal, nextInfo[1] = duration
+            Phase afterPhase = Phase.values()[nextInfo[0]];
+            long nextStart = endTimestamp;
+            long nextEnd = nextStart + (nextInfo[1] * 1000L);
+            phaseChangePayload.put("nextPhaseChange", Map.of(
+                "newPhase", afterPhase.toString(),
+                "startTimestamp", nextStart,
+                "endTimestamp", nextEnd
+            ));
+        }
+
+        broadcastMessage(MessageType.DATA, Map.of("phaseChange", phaseChangePayload));
 
         currentTask = scheduler.schedule(() -> {
             this.phaseStartTimestamp = 0;
@@ -220,6 +234,29 @@ public class Game {
         }, durationSeconds, TimeUnit.SECONDS);
 
         // We have to be careful here not to start a bunch of threads that take up things on the processor.
+    }
+
+    /**
+     * Pre-computes what phase comes after {@code forPhase} and how long
+     * it lasts.  Returns {@code int[]{nextPhaseOrdinal, durationSeconds}}
+     * or {@code null} when the chain should not be pre-announced (e.g.
+     * FINISHED, or future "wait for host" phases).
+     */
+    private int[] getNextPhaseDuration(Phase forPhase) {
+        return switch (forPhase) {
+            case WAITING       -> new int[]{ Phase.PLAYING_MUSIC.ordinal(), PhaseDelays.WAIT_DELAY };
+            case PLAYING_MUSIC -> new int[]{ Phase.GUESSING.ordinal(), PhaseDelays.MUSIC_DELAY };
+            case GUESSING      -> new int[]{ Phase.REVEAL.ordinal(), PhaseDelays.GUESS_DELAY };
+            case REVEAL -> {
+                int nextRound = currentRound + 1;
+                if (nextRound < quizz.getTracks().size()) {
+                    yield new int[]{ Phase.WAITING.ordinal(), 5 };
+                } else {
+                    yield new int[]{ Phase.FINISHED.ordinal(), PhaseDelays.REVEAL_DELAY };
+                }
+            }
+            default -> null;
+        };
     }
 
     private void handlePhaseTransition(Phase newPhase) {
@@ -345,13 +382,6 @@ public class Game {
         private static final int WAIT_DELAY = 3;
 
         private static final int FINISHED_DELAY = 120;
-
-        /**
-         * Extra milliseconds added to the endTimestamp sent to clients.
-         * Compensates for network latency so the progress bar finishes
-         * at roughly the same moment the phase-change message arrives.
-         */
-        static final int NETWORK_BUFFER_MS = 1500;
     }
 
     public void freezePlayer(String playerId) {
