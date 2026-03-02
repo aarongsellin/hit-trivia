@@ -195,15 +195,18 @@ public class Game {
 
         long startTimestamp = System.currentTimeMillis();
         long endTimestamp = startTimestamp + (durationSeconds * 1000);
+        // Pad the client-facing endTimestamp so the progress bar accounts
+        // for network latency — the bar finishes when the phase message arrives
+        long clientEndTimestamp = endTimestamp + PhaseDelays.NETWORK_BUFFER_MS;
         this.phaseStartTimestamp = startTimestamp;
-        this.phaseEndTimestamp = endTimestamp;
+        this.phaseEndTimestamp = clientEndTimestamp;
         this.nextPhase = newPhase;
 
         broadcastMessage(MessageType.DATA, Map.of(
             "phaseChange", Map.of(
                 "newPhase", newPhase.toString(),
                 "startTimestamp", startTimestamp,
-                "endTimestamp", endTimestamp)
+                "endTimestamp", clientEndTimestamp)
         ));
 
         currentTask = scheduler.schedule(() -> {
@@ -342,6 +345,13 @@ public class Game {
         private static final int WAIT_DELAY = 3;
 
         private static final int FINISHED_DELAY = 120;
+
+        /**
+         * Extra milliseconds added to the endTimestamp sent to clients.
+         * Compensates for network latency so the progress bar finishes
+         * at roughly the same moment the phase-change message arrives.
+         */
+        static final int NETWORK_BUFFER_MS = 1500;
     }
 
     public void freezePlayer(String playerId) {
