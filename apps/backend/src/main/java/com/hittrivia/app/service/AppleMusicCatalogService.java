@@ -6,6 +6,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +26,7 @@ public class AppleMusicCatalogService {
     private static final String BASE_URL = "https://api.music.apple.com/v1/catalog";
 
     private final AppleMusicTokenService tokenService;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AppleMusicCatalogService(AppleMusicTokenService tokenService) {
@@ -151,6 +152,7 @@ public class AppleMusicCatalogService {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(5))
                 .header("Authorization", "Bearer " + token)
                 .GET()
                 .build();
