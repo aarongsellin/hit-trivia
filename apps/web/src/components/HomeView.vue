@@ -169,6 +169,11 @@
           </p>
         </div>
 
+        <div class="beta-banner">
+          <span class="beta-tag">BETA</span>
+          Song gneeration is in an experimental phase - Searches are hit or miss
+        </div>
+
         <div class="steps">
           <div class="step" v-for="(step, index) in steps" :key="index">
             <div class="step-number">{{ index + 1 }}</div>
@@ -418,6 +423,32 @@ export default {
 </script>
 
 <style scoped>
+/* ─── Beta Banner ──────────────────────────────── */
+
+.beta-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #6d5a00;
+}
+
+.beta-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  background: #f59e0b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+}
+
 /* ─── Layout ───────────────────────────────────── */
 
 .landing {

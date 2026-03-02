@@ -110,12 +110,10 @@
       v-if="playerName && gameState === 'WAITING_CONFIG' && isAdmin"
       :selectedGenre="selectedGenre"
       :selectedDecade="selectedDecade"
-      :selectedObscurity="selectedObscurity"
       :selectedRounds="selectedRounds"
       :gameUrl="gameUrl"
       @update:genre="selectedGenre = $event"
       @update:decade="selectedDecade = $event"
-      @update:obscurity="selectedObscurity = $event"
       @update:rounds="selectedRounds = $event"
       @start-game="startGame"
     />

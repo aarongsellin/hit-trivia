@@ -41,6 +41,7 @@
           </div>
         </div>
 
+        <!-- Obscurity disabled for now
         <div class="config-group">
           <label>Obscurity</label>
           <div class="obscurity-slider">
@@ -57,6 +58,7 @@
             }}</span>
           </div>
         </div>
+        -->
 
         <div class="config-group">
           <label>Rounds</label>
