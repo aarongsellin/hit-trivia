@@ -83,14 +83,7 @@ public class AppleMusicTokenService {
     }
 
     private ECPrivateKey loadPrivateKey() throws Exception {
-        // denna behöver ses över
-        // Strip PEM headers/footers and whitespace
-        String base64Key = privateKeyPem
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] keyBytes = Base64.getDecoder().decode(base64Key);
+        byte[] keyBytes = Base64.getDecoder().decode(privateKeyPem);
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("EC");
         return (ECPrivateKey) keyFactory.generatePrivate(keySpec);

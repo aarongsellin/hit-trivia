@@ -260,18 +260,8 @@ export default {
     };
   },
   created: function () {
-    // In production (same-origin), use window.location.host.
-    // In dev, VUE_APP_API_URL points to the backend dev server.
-    const envUrl = process.env.VUE_APP_API_URL;
-    let wsHost;
-    let wsProtocol;
-    if (envUrl) {
-      wsHost = envUrl.replace(/^https?:\/\//, '');
-      wsProtocol = 'ws';
-    } else {
-      wsHost = window.location.host;
-      wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    }
+    const wsHost = window.location.host;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
     const route = useRoute();
     this.router = useRouter();
@@ -407,7 +397,6 @@ export default {
       this.socket.send(toSend);
     },
     handleGuessSubmit(guess) {
-      console.log('Guess submitted:', guess);
       // Send guess to backend
       this.socket.send(
         JSON.stringify({
@@ -417,7 +406,6 @@ export default {
       );
     },
     handlePlayAgain() {
-      console.log('Play again clicked');
       // Reset game or navigate back to lobby
     },
     requestTracks() {
@@ -457,11 +445,11 @@ export default {
         // When complete, clear interval and trigger phase change
         if (percentage <= 0) {
           clearInterval(this.progressInterval);
-          this.handlePhaseChange(newPhase);
+          this.phaseChangeCleanup();
         }
       }, 50);
     },
-    handlePhaseChange(phase) {
+    phaseChangeCleanup() {
       // Clear progress bar
       this.phaseEndTime = null;
       this.progressPercentage = 0;
@@ -470,13 +458,8 @@ export default {
       }
 
       // Timer completed - backend will send the phase update message
-      console.log('Countdown completed for:', phase);
     },
     handleMessage(data) {
-      console.log(
-        'Received message from server: ',
-        JSON.stringify(data, null, 2)
-      );
       this.messages.push({
         text: data,
         sender: 'Server',
@@ -572,11 +555,6 @@ export default {
                   this.musicDuration = Math.floor(
                     (Date.now() - this.musicPhaseStartTime) / 1000
                   );
-                  console.log(
-                    'Music played for:',
-                    this.musicDuration,
-                    'seconds'
-                  );
                 }
                 break;
               }
@@ -589,7 +567,6 @@ export default {
                 break;
               case 'tracks':
                 this.tracks = element;
-                console.log('Received tracks:', element);
                 // If currentRound is already set (e.g. reconnect), resolve currentTrack now
                 if (
                   this.tracks &&
@@ -597,15 +574,10 @@ export default {
                   !this.currentTrack
                 ) {
                   this.currentTrack = this.tracks[this.currentRound];
-                  console.log(
-                    'Resolved current track from tracks arrival:',
-                    this.currentTrack
-                  );
                 }
                 break;
               case 'guessResult':
                 this.guessResult = element;
-                console.log('Guess result:', element);
                 break;
               case 'finalScores':
                 this.finalScores = element;
@@ -615,23 +587,20 @@ export default {
                 );
                 // Clear mute preference at game end
                 localStorage.removeItem(`musicMuted_${this.gameId}`);
-                console.log('Final scores:', element);
                 break;
               case 'currentRound':
                 this.currentRound = element;
                 if (this.tracks && this.tracks[element]) {
                   this.currentTrack = this.tracks[element];
-                  console.log('Current track:', this.currentTrack);
                 }
                 break;
               default:
-                console.log('Unknown data contents', { key });
+                break;
             }
           }
         }
 
         if (type === 'error') {
-          console.log('received error:', parsed);
           this.waitingForServer = false;
           if (parsed?.code === 'GAME_FINISHED') {
             // Game is over — redirect home
@@ -656,12 +625,10 @@ export default {
         video.src = this.currentTrack.musicVideoUrl;
         video.load();
         this.preloadedVideoUrl = this.currentTrack.musicVideoUrl;
-        console.log('Preloading video:', this.currentTrack.musicVideoUrl);
       }
     },
     sendMessage(message) {
       if (this.socket.status === 'CLOSED') {
-        console.log('Socket is closed, can not send!');
         return;
       }
 

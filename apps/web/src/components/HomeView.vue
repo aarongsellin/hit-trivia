@@ -263,8 +263,7 @@ export default {
     return {
       totalGameCount: 0,
       activeGames: [],
-      apiUrl: process.env.VUE_APP_API_URL || '',
-      affiliateToken: process.env.VUE_APP_APPLE_AFFILIATE_TOKEN || '',
+      affiliateToken: '',
       isLoading: false,
       steps: [
         {
@@ -368,34 +367,34 @@ export default {
     },
     async fetchGameCount() {
       try {
-        const res = await fetch(`${this.apiUrl}/api/game-count`);
+        const res = await fetch('/api/game-count');
         const data = await res.json();
         this.totalGameCount = data.count;
-      } catch (err) {
-        console.error('Error fetching game count:', err);
+      } catch {
+        // silently ignore
       }
     },
     async fetchActiveGames() {
       try {
-        const res = await fetch(`${this.apiUrl}/api/active-games`);
+        const res = await fetch('/api/active-games');
         this.activeGames = await res.json();
-      } catch (err) {
-        console.error('Error fetching active games:', err);
+      } catch {
+        // silently ignore
       }
     },
     async createGame() {
       this.isLoading = true;
 
       try {
-        const res = await fetch(`${this.apiUrl}/api/new-game`);
+        const res = await fetch('/api/new-game');
         const resJson = await res.json();
         const id = resJson.data.id;
 
         if (id) {
           this.router.push({ path: '/game', query: { id } });
         }
-      } catch (err) {
-        console.error('Error creating game:', err);
+      } catch {
+        // silently ignore
       } finally {
         this.isLoading = false;
       }

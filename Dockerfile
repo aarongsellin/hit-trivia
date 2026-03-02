@@ -13,8 +13,8 @@ RUN cd apps/web && npm install
 # Copy web app source
 COPY apps/web/ apps/web/
 
-# Build frontend with empty API URL (same-origin in production)
-RUN cd apps/web && VUE_APP_API_URL= VUE_APP_APPLE_AFFILIATE_TOKEN= npx vue-cli-service build
+# Build frontend
+RUN cd apps/web && npx vue-cli-service build
 
 
 # ---- Stage 2: Build Java backend ----
