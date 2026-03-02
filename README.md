@@ -25,8 +25,8 @@ A real-time multiplayer music trivia game. Create a game, invite friends with a 
 
 ```
 apps/
-  web/          → Vue 3 frontend (served as static files from Spring Boot)
-  backend/      → Spring Boot backend (WebSocket game server + REST API)
+  web/           Vue 3 frontend (served as static files from Spring Boot)
+  backend/       Spring Boot backend (WebSocket game server + REST API)
 ```
 
 ## Local Development
@@ -53,7 +53,7 @@ The frontend dev server runs on `http://localhost:3000` and the backend on `http
 | `ALLOWED_ORIGINS`   | CORS allowed origins (comma-separated)     | `http://localhost:3000` |
 | `PORT`              | Server port (set automatically by Railway) | `8080`                  |
 
-Create a `application-local.properties` file in the resources folder in backend/src/main and add the Apple WebKit secrets in this manner:
+Create a `application-local.properties` file in the resources folder in `backend/src/main` and add the Apple WebKit secrets in this manner:
 
 ```
 apple.music.team-id=1234asdf
