@@ -36,13 +36,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/**", "/ws/**").permitAll()
-                .requestMatchers("/", "/game", "/index.html", "/favicon.ico",
-                    "/css/**", "/js/**", "/img/**", "/fonts/**", "/assets/**").permitAll()
                 .anyRequest().permitAll()
             );
         return http.build();
