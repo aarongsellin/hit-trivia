@@ -690,7 +690,7 @@ export default {
   top: 0;
   left: 0;
   width: 100%;
-  height: 6px;
+  height: 14px;
   background: rgba(0, 0, 0, 0.1);
   z-index: 1000;
   overflow: hidden;
