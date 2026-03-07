@@ -56,7 +56,13 @@
           </div>
         </div>
 
-        <button @click="handleStart" :disabled="!searchTerm?.trim()" class="start-btn">Start Game</button>
+        <button
+          @click="handleStart"
+          :disabled="!searchTerm?.trim()"
+          class="start-btn"
+        >
+          Start Game
+        </button>
 
         <div class="host-music-hint">
           <span class="hint-icon"
@@ -121,14 +127,17 @@ export default {
       default: null,
     },
   },
-  emits: [
-    'update:searchTerm',
-    'update:rounds',
-    'start-game',
-  ],
+  emits: ['update:searchTerm', 'update:rounds', 'start-game'],
   data() {
     return {
-      suggestions: ['80s Rock', '2000s Pop', 'Taylor Swift', 'Hip-Hop Classics', 'Swedish Pop', 'Jazz Standards'],
+      suggestions: [
+        '80s Rock',
+        '2000s Pop',
+        'Taylor Swift',
+        'Hip-Hop Classics',
+        'Swedish Pop',
+        'Jazz Standards',
+      ],
       isLoading: false,
       copyLabel: 'Copy',
     };
