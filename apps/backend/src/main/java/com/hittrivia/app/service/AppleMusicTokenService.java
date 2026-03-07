@@ -1,12 +1,12 @@
 package com.hittrivia.app.service;
 
+import com.hittrivia.app.config.AppleMusicProperties;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.KeyFactory;
@@ -21,23 +21,17 @@ public class AppleMusicTokenService {
 
     private static final Logger log = LoggerFactory.getLogger(AppleMusicTokenService.class);
 
-    // Max token lifetime Apple allows: 6 months
-    private static final long MAX_TOKEN_LIFETIME_SECONDS = 15_777_000L;
-
     // We'll generate tokens valid for 24 hours and cache them
     private static final long TOKEN_LIFETIME_SECONDS = 86_400L;
 
-    @Value("${apple.music.team-id}")
-    private String teamId;
-
-    @Value("${apple.music.key-id}")
-    private String keyId;
-
-    @Value("${apple.music.private-key}")
-    private String privateKeyPem;
+    private final AppleMusicProperties props;
 
     private String cachedToken;
     private Instant cachedTokenExpiry;
+
+    public AppleMusicTokenService(AppleMusicProperties props) {
+        this.props = props;
+    }
 
     /**
      * Returns a valid Apple Music developer token (ES256-signed JWT).
@@ -66,11 +60,11 @@ public class AppleMusicTokenService {
         Instant exp = now.plusSeconds(TOKEN_LIFETIME_SECONDS);
 
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256)
-                .keyID(keyId)
+                .keyID(props.keyId())
                 .build();
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                .issuer(teamId)
+                .issuer(props.teamId())
                 .issueTime(Date.from(now))
                 .expirationTime(Date.from(exp))
                 .build();
@@ -83,7 +77,7 @@ public class AppleMusicTokenService {
     }
 
     private ECPrivateKey loadPrivateKey() throws Exception {
-        byte[] keyBytes = Base64.getDecoder().decode(privateKeyPem);
+        byte[] keyBytes = Base64.getDecoder().decode(props.privateKey());
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("EC");
         return (ECPrivateKey) keyFactory.generatePrivate(keySpec);

@@ -40,10 +40,12 @@ class AppleMusicCatalogServiceTest {
             throw new RuntimeException("Could not load application-local.properties", e);
         }
 
-        AppleMusicTokenService tokenService = new AppleMusicTokenService();
-        ReflectionTestUtils.setField(tokenService, "teamId", props.getProperty("apple.music.team-id"));
-        ReflectionTestUtils.setField(tokenService, "keyId", props.getProperty("apple.music.key-id"));
-        ReflectionTestUtils.setField(tokenService, "privateKeyPem", props.getProperty("apple.music.private-key"));
+        var appleMusicProps = new com.hittrivia.app.config.AppleMusicProperties(
+                props.getProperty("apple.music.team-id"),
+                props.getProperty("apple.music.key-id"),
+                props.getProperty("apple.music.private-key")
+        );
+        AppleMusicTokenService tokenService = new AppleMusicTokenService(appleMusicProps);
 
         service = new AppleMusicCatalogService(tokenService);
     }
