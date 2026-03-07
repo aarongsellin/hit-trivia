@@ -236,6 +236,7 @@ export default {
       progressInterval: null,
       pendingPhase: null, // The next phase announced by the server
       queuedPhaseChange: null, // Pre-sent next countdown from server
+      clockOffset: 0, // serverTime - Date.now(); add to Date.now() to get server-equivalent time
 
       // Configuration options
       selectedGenre: 'Pop',
@@ -298,8 +299,10 @@ export default {
   computed: {
     musicSeekOffset() {
       // Seconds elapsed since the PLAYING_MUSIC phase started (for reconnect seek)
+      // Adjust for clock offset between server and client
       if (this.phaseStartTime && this.gameState === 'PLAYING_MUSIC') {
-        return Math.max(0, (Date.now() - this.phaseStartTime) / 1000);
+        const now = Date.now() + this.clockOffset;
+        return Math.max(0, (now - this.phaseStartTime) / 1000);
       }
       return 0;
     },
@@ -430,6 +433,7 @@ export default {
       // If server clock is 500ms ahead, offset = +500 → we add 500 to Date.now()
       // to get the "server-equivalent" time.
       const clockOffset = serverTime ? serverTime - Date.now() : 0;
+      this.clockOffset = clockOffset;
 
       // Use the server's original start time to calculate total duration
       // so the bar shows the correct proportion even after a page reload

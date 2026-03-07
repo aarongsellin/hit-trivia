@@ -116,6 +116,13 @@ export default {
       }
     }, 500);
 
+    // Retry seek once audio metadata is available (duration becomes valid)
+    const audio = this.$refs.audioPlayer;
+    if (audio) {
+      this._metadataHandler = () => this.seekToOffset();
+      audio.addEventListener('loadedmetadata', this._metadataHandler);
+    }
+
     // Listen for any click/tap on the document to unlock audio
     this._docClickHandler = () => {
       if (this.autoplayBlocked) {
@@ -141,6 +148,9 @@ export default {
     }
     const audio = this.$refs.audioPlayer;
     if (audio) {
+      if (this._metadataHandler) {
+        audio.removeEventListener('loadedmetadata', this._metadataHandler);
+      }
       audio.pause();
       audio.src = '';
     }
@@ -149,10 +159,16 @@ export default {
   },
   methods: {
     seekToOffset() {
-      if (this.hasSeeked || this.seekOffset <= 0) return;
+      if (this.hasSeeked) return;
+      // Use the track's own start time if no reconnect offset was given
+      const offset =
+        this.seekOffset > 0
+          ? this.seekOffset
+          : this.track?.startTimeSeconds || 0;
+      if (offset <= 0) return;
       const audio = this.$refs.audioPlayer;
-      if (!audio || !audio.duration) return;
-      const target = Math.min(this.seekOffset, audio.duration - 0.5);
+      if (!audio || !Number.isFinite(audio.duration)) return;
+      const target = Math.min(offset, audio.duration - 0.5);
       if (target > 0) {
         audio.currentTime = target;
       }
