@@ -203,10 +203,13 @@ public class Game {
         // Build the phaseChange payload, including a look-ahead so the
         // client can chain the next countdown without waiting for a
         // server round-trip.
+        // We send serverTime so the client can compute a clock offset
+        // (Railway's clock may differ from the browser's clock).
         Map<String, Object> phaseChangePayload = new java.util.HashMap<>(Map.of(
             "newPhase", newPhase.toString(),
             "startTimestamp", startTimestamp,
-            "endTimestamp", endTimestamp
+            "endTimestamp", endTimestamp,
+            "serverTime", System.currentTimeMillis()
         ));
 
         int[] nextInfo = getNextPhaseDuration(newPhase);
@@ -218,7 +221,8 @@ public class Game {
             phaseChangePayload.put("nextPhaseChange", Map.of(
                 "newPhase", afterPhase.toString(),
                 "startTimestamp", nextStart,
-                "endTimestamp", nextEnd
+                "endTimestamp", nextEnd,
+                "serverTime", System.currentTimeMillis()
             ));
         }
 

@@ -387,7 +387,8 @@ public class GameSocketHandler extends TextWebSocketHandler {
                 "phaseChange", Map.of(
                     "newPhase", game.getNextPhase().toString(),
                     "startTimestamp", game.getPhaseStartTimestamp(),
-                    "endTimestamp", game.getPhaseEndTimestamp()
+                    "endTimestamp", game.getPhaseEndTimestamp(),
+                    "serverTime", System.currentTimeMillis()
                 )
             ));
         }

@@ -417,7 +417,7 @@ export default {
         })
       );
     },
-    startPhaseCountdown(newPhase, startTimestamp, endTimestamp) {
+    startPhaseCountdown(newPhase, startTimestamp, endTimestamp, serverTime) {
       // Clear any existing interval
       if (this.progressInterval) {
         clearInterval(this.progressInterval);
@@ -426,6 +426,11 @@ export default {
       // Remember what phase we're counting down to
       this.pendingPhase = newPhase;
 
+      // Compute clock offset between server and client.
+      // If server clock is 500ms ahead, offset = +500 → we add 500 to Date.now()
+      // to get the "server-equivalent" time.
+      const clockOffset = serverTime ? serverTime - Date.now() : 0;
+
       // Use the server's original start time to calculate total duration
       // so the bar shows the correct proportion even after a page reload
       this.phaseStartTime = startTimestamp;
@@ -433,14 +438,14 @@ export default {
 
       const totalDuration = endTimestamp - startTimestamp;
 
-      // Start at the correct remaining percentage
-      const now = Date.now();
+      // Start at the correct remaining percentage (adjusted for clock offset)
+      const now = Date.now() + clockOffset;
       const remaining = endTimestamp - now;
       this.progressPercentage = Math.max((remaining / totalDuration) * 100, 0);
 
       // Update progress every 50ms for smooth animation
       this.progressInterval = setInterval(() => {
-        const now = Date.now();
+        const now = Date.now() + clockOffset;
         const remaining = endTimestamp - now;
         const percentage = Math.max((remaining / totalDuration) * 100, 0);
 
@@ -477,7 +482,8 @@ export default {
         this.startPhaseCountdown(
           next.newPhase,
           next.startTimestamp,
-          next.endTimestamp
+          next.endTimestamp,
+          next.serverTime
         );
       }
     },
@@ -590,7 +596,8 @@ export default {
                 this.startPhaseCountdown(
                   element.newPhase,
                   element.startTimestamp,
-                  element.endTimestamp
+                  element.endTimestamp,
+                  element.serverTime
                 );
                 break;
               case 'tracks':
