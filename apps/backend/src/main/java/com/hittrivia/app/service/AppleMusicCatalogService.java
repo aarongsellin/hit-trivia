@@ -78,40 +78,19 @@ public class AppleMusicCatalogService {
     }
 
     /**
-     * Get songs for a game round. Builds a search term from the user's
-     * genre / decade selection, searches Apple Music, deduplicates,
-     * shuffles and returns the requested count.
+     * Get songs for a game round. Searches Apple Music with the host's
+     * raw search term, deduplicates, shuffles and returns the requested count.
      */
-    public List<Track> getTracksForGame(String genre, String decade,
+    public List<Track> getTracksForGame(String searchTerm,
                                         String storefront, int count) throws Exception {
 
-        String term = buildSearchTerm(genre, decade);
+        String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm.trim() : "top hits";
         log.info("getTracksForGame — term='{}', storefront={}, count={}", term, storefront, count);
 
-        // Fetch up to 25 results (API max), keeping genre tags for filtering
+        // Fetch up to 25 results (API max)
         List<TaggedTrack> tagged = searchSongsTagged(term, storefront, SEARCH_LIMIT);
 
-        // Post-filter by genre using the genreNames from the API response
-        if (genre != null && !genre.isBlank()) {
-            String normGenre = normalize(genre);
-            tagged = tagged.stream()
-                    .filter(tt -> tt.genreNames().stream()
-                            .anyMatch(g -> normalize(g).contains(normGenre) || normGenre.contains(normalize(g))))
-                    .toList();
-            log.info("After genre filter ('{}'): {} tracks", genre, tagged.size());
-        }
-
         List<Track> pool = tagged.stream().map(TaggedTrack::track).collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-
-        // If a decade was chosen, keep only tracks whose release year is in range
-        if (decade != null && !decade.isEmpty()) {
-            int startYear = parseDecadeStartYear(decade);
-            int endYear = startYear + 9;
-            pool = pool.stream()
-                    .filter(t -> t.releaseYear() >= startYear && t.releaseYear() <= endYear)
-                    .toList();
-            log.info("After decade filter ({}-{}): {} tracks", startYear, endYear, pool.size());
-        }
 
         // Drop tracks without a preview URL and deduplicate by title+artist
         LinkedHashMap<String, Track> seen = new LinkedHashMap<>();
@@ -147,17 +126,6 @@ public class AppleMusicCatalogService {
                             track.startTimeSeconds(), track.releaseYear());
                 })
                 .toList();
-    }
-
-    private String buildSearchTerm(String genre, String decade) {
-        StringBuilder sb = new StringBuilder();
-        if (genre != null && !genre.isBlank()) sb.append(genre);
-        if (decade != null && !decade.isBlank()) {
-            if (!sb.isEmpty()) sb.append(' ');
-            sb.append(decade);
-        }
-        if (sb.isEmpty()) sb.append("top hits");
-        return sb.toString();
     }
 
     private JsonNode makeRequest(String url) throws Exception {
@@ -269,15 +237,4 @@ public class AppleMusicCatalogService {
         return d.toLowerCase().replaceAll("[^a-z0-9 ]", "").replaceAll("\\s+", " ").trim();
     }
 
-    private int parseDecadeStartYear(String decade) {
-        if (decade == null) return 0;
-        String cleaned = decade.replaceAll("[^0-9]", "");
-        try {
-            int num = Integer.parseInt(cleaned);
-            if (num < 100) num = num >= 30 ? 1900 + num : 2000 + num;
-            return num;
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
 }

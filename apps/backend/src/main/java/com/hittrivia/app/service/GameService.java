@@ -48,14 +48,12 @@ public class GameService {
             if (hostName == null || hostName.isBlank()) continue;
 
             int playerCount = game.getPlayerCount();
-            String genre = game.getGenre();
-            String decade = game.getDecade();
+            String searchTerm = game.getSearchTerm();
 
             Map<String, Object> entry = new java.util.LinkedHashMap<>();
             entry.put("host", hostName);
             entry.put("players", playerCount);
-            if (genre != null && !genre.isEmpty()) entry.put("genre", genre);
-            if (decade != null && !decade.isEmpty()) entry.put("decade", decade);
+            if (searchTerm != null && !searchTerm.isEmpty()) entry.put("searchTerm", searchTerm);
             entry.put("phase", phase.toString());
             result.add(entry);
         }

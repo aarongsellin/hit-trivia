@@ -108,12 +108,10 @@
     <!-- Phase Components -->
     <ConfigPhase
       v-if="playerName && gameState === 'WAITING_CONFIG' && isAdmin"
-      :selectedGenre="selectedGenre"
-      :selectedDecade="selectedDecade"
+      :searchTerm="searchTerm"
       :selectedRounds="selectedRounds"
       :gameUrl="gameUrl"
-      @update:genre="selectedGenre = $event"
-      @update:decade="selectedDecade = $event"
+      @update:searchTerm="searchTerm = $event"
       @update:rounds="selectedRounds = $event"
       @start-game="startGame"
     />
@@ -239,9 +237,7 @@ export default {
       clockOffset: 0, // serverTime - Date.now(); add to Date.now() to get server-equivalent time
 
       // Configuration options
-      selectedGenre: 'Pop',
-      selectedDecade: '2000s',
-      selectedObscurity: 3,
+      searchTerm: '',
       selectedRounds: 5,
 
       // Tracks and current track
@@ -387,9 +383,7 @@ export default {
     },
     startGame() {
       const config = {
-        genre: this.selectedGenre,
-        decade: this.selectedDecade,
-        obscurity: this.selectedObscurity,
+        searchTerm: this.searchTerm,
         trackCount: this.selectedRounds,
       };
 

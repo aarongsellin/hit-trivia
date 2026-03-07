@@ -14,51 +14,29 @@
         <h2>Game Configuration</h2>
 
         <div class="config-group">
-          <label>Genre</label>
-          <div class="option-grid">
+          <label>What do you want to play?</label>
+          <input
+            ref="searchInput"
+            :value="searchTerm"
+            @input="$emit('update:searchTerm', $event.target.value)"
+            @keyup.enter="handleStart"
+            type="text"
+            placeholder="e.g. 80s rock, Taylor Swift, Swedish pop..."
+            class="search-input"
+            maxlength="100"
+            autofocus
+          />
+          <div class="search-suggestions">
             <button
-              v-for="genre in genres"
-              :key="genre"
-              @click="$emit('update:genre', genre)"
-              :class="['option-btn', { active: selectedGenre === genre }]"
+              v-for="suggestion in suggestions"
+              :key="suggestion"
+              @click="$emit('update:searchTerm', suggestion)"
+              class="suggestion-btn"
             >
-              {{ genre }}
+              {{ suggestion }}
             </button>
           </div>
         </div>
-
-        <div class="config-group">
-          <label>Decade</label>
-          <div class="option-grid">
-            <button
-              v-for="decade in decades"
-              :key="decade"
-              @click="$emit('update:decade', decade)"
-              :class="['option-btn', { active: selectedDecade === decade }]"
-            >
-              {{ decade }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Obscurity disabled for now
-        <div class="config-group">
-          <label>Obscurity</label>
-          <div class="obscurity-slider">
-            <input
-              :value="selectedObscurity"
-              @input="$emit('update:obscurity', Number($event.target.value))"
-              type="range"
-              min="1"
-              max="5"
-              class="slider"
-            />
-            <span class="obscurity-label">{{
-              obscurityLabels[selectedObscurity - 1]
-            }}</span>
-          </div>
-        </div>
-        -->
 
         <div class="config-group">
           <label>Rounds</label>
@@ -78,7 +56,7 @@
           </div>
         </div>
 
-        <button @click="handleStart" class="start-btn">Start Game</button>
+        <button @click="handleStart" :disabled="!searchTerm?.trim()" class="start-btn">Start Game</button>
 
         <div class="host-music-hint">
           <span class="hint-icon"
@@ -129,9 +107,10 @@ export default {
   name: 'ConfigPhase',
   components: { QRCodeVue },
   props: {
-    selectedGenre: String,
-    selectedDecade: String,
-    selectedObscurity: Number,
+    searchTerm: {
+      type: String,
+      default: '',
+    },
     selectedRounds: Number,
     gameUrl: {
       type: String,
@@ -143,23 +122,13 @@ export default {
     },
   },
   emits: [
-    'update:genre',
-    'update:decade',
-    'update:obscurity',
+    'update:searchTerm',
     'update:rounds',
     'start-game',
   ],
   data() {
     return {
-      genres: ['Pop', 'Rock', 'Hip-Hop', 'Country', 'Electronic', 'Jazz'],
-      decades: ['1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'],
-      obscurityLabels: [
-        'Very Famous',
-        'Famous',
-        'Known',
-        'Obscure',
-        'Very Obscure',
-      ],
+      suggestions: ['80s Rock', '2000s Pop', 'Taylor Swift', 'Hip-Hop Classics', 'Swedish Pop', 'Jazz Standards'],
       isLoading: false,
       copyLabel: 'Copy',
     };
@@ -329,31 +298,46 @@ export default {
   letter-spacing: 0.5px;
 }
 
-.option-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.option-btn {
-  padding: 10px 14px;
-  background: #fff;
+.search-input {
+  width: 100%;
+  padding: 12px 14px;
   border: 1px solid #ddd;
   border-radius: 3px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  border-color: #000;
+}
+
+.search-input::placeholder {
+  color: #aaa;
+}
+
+.search-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.suggestion-btn {
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  color: #555;
   transition: all 0.15s ease;
 }
 
-.option-btn:hover {
-  background: #f9f9f9;
-  border-color: #999;
-}
-
-.option-btn.active {
-  background: #000;
-  color: white;
-  border-color: #000;
+.suggestion-btn:hover {
+  background: #e8e8e8;
+  border-color: #ccc;
 }
 
 .obscurity-slider {

@@ -20,14 +20,13 @@ public class Quizz {
     public boolean loadTracks(JsonNode configuration, AppleMusicCatalogService catalogService) {
         System.out.println("Quizz load tracks with configuration: " + configuration);
 
-        String genre = configuration.has("genre") ? configuration.get("genre").asText(null) : null;
-        String decade = configuration.has("decade") ? configuration.get("decade").asText(null) : null;
+        String searchTerm = configuration.has("searchTerm") ? configuration.get("searchTerm").asText(null) : null;
         String storefront = configuration.has("storefront") ? configuration.get("storefront").asText(DEFAULT_STOREFRONT) : DEFAULT_STOREFRONT;
         int trackCount = configuration.has("trackCount") ? configuration.get("trackCount").asInt(DEFAULT_TRACK_COUNT) : DEFAULT_TRACK_COUNT;
 
         if (catalogService != null) {
             try {
-                this.tracks = catalogService.getTracksForGame(genre, decade, storefront, trackCount);
+                this.tracks = catalogService.getTracksForGame(searchTerm, storefront, trackCount);
                 System.out.println("this.tracks" + this.tracks);
                 if (!this.tracks.isEmpty()) {
                     System.out.println("Loaded " + this.tracks.size() + " tracks from Apple Music catalog");

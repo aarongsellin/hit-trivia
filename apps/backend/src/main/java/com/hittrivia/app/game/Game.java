@@ -36,8 +36,7 @@ public class Game {
     private List<Track> tracks;
 
     // Game configuration (set when game starts)
-    private String genre;
-    private String decade;
+    private String searchTerm;
 
     private Phase phase = Phase.WAITING_CONFIG;
     private int currentRound = 0;
@@ -156,8 +155,7 @@ public class Game {
                 .orElse(null);
     }
 
-    public String getGenre() { return genre; }
-    public String getDecade() { return decade; }
+    public String getSearchTerm() { return searchTerm; }
 
     // This also starts the game...
     public void setConfiguration(JsonNode configuration) {
@@ -165,8 +163,7 @@ public class Game {
         System.out.println("configuration in game class: " + configuration);
 
         // Store config for the active-games API
-        this.genre = configuration.has("genre") ? configuration.get("genre").asText(null) : null;
-        this.decade = configuration.has("decade") ? configuration.get("decade").asText(null) : null;
+        this.searchTerm = configuration.has("searchTerm") ? configuration.get("searchTerm").asText(null) : null;
 
         // Fetch tracks from Apple Music (blocking API call)
         quizz.loadTracks(configuration, catalogService);
@@ -266,6 +263,9 @@ public class Game {
 
     private void handlePhaseTransition(Phase newPhase) {
         switch (newPhase) {
+            case WAITING_CONFIG:
+                // Initial config phase — no automatic transition; host starts the game.
+                break;
             case WAITING:
                 // A wait for start.
                 startPhaseWithTimer(Phase.PLAYING_MUSIC, PhaseDelays.WAIT_DELAY);

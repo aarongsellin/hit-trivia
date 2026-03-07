@@ -73,22 +73,35 @@ class AppleMusicCatalogServiceTest {
     }
 
     @Test @Order(3)
-    @DisplayName("parseDecadeStartYear: '2010s' → 2010, '80s' → 1980, null → 0")
-    void parseDecadeStartYear_variants() {
-        assertThat(invokeParseDecade("2010s")).isEqualTo(2010);
-        assertThat(invokeParseDecade("80s")).isEqualTo(1980);
-        assertThat(invokeParseDecade("1990s")).isEqualTo(1990);
-        assertThat(invokeParseDecade("20s")).isEqualTo(2020);
-        assertThat(invokeParseDecade(null)).isEqualTo(0);
+    @DisplayName("getTracksForGame returns tracks for Pop search with previews, no duplicates")
+    void getTracksForGame_popSearch() throws Exception {
+        List<Track> tracks = service.getTracksForGame("Pop", "us", 5);
+
+        assertThat(tracks).isNotEmpty();
+        assertThat(tracks.size()).isLessThanOrEqualTo(5);
+        // All tracks must have preview URLs (business rule)
+        assertThat(tracks).allSatisfy(t -> assertThat(t.previewUrl()).isNotBlank());
+        // No duplicate title+artist
+        long uniqueCount = tracks.stream()
+                .map(t -> t.title().toLowerCase() + "|" + t.artist().toLowerCase())
+                .distinct().count();
+        assertThat(uniqueCount).isEqualTo(tracks.size());
     }
 
     @Test @Order(4)
-    @DisplayName("buildSearchTerm combines genre + decade, defaults to 'top hits'")
-    void buildSearchTerm_variants() {
-        assertThat(invokeBuildSearchTerm("pop", "2010s")).isEqualTo("pop 2010s");
-        assertThat(invokeBuildSearchTerm("rock", null)).isEqualTo("rock");
-        assertThat(invokeBuildSearchTerm(null, "1990s")).isEqualTo("1990s");
-        assertThat(invokeBuildSearchTerm(null, null)).isEqualTo("top hits");
+    @DisplayName("getTracksForGame with decade search returns results")
+    void getTracksForGame_decade() throws Exception {
+        List<Track> tracks = service.getTracksForGame("2010s hits", "us", 5);
+
+        assertThat(tracks).isNotEmpty();
+    }
+
+    @Test @Order(5)
+    @DisplayName("getTracksForGame with combined search returns results")
+    void getTracksForGame_combined() throws Exception {
+        List<Track> tracks = service.getTracksForGame("Rock 2000s", "us", 5);
+
+        assertThat(tracks).isNotEmpty();
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -120,48 +133,6 @@ class AppleMusicCatalogServiceTest {
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  getTracksForGame — filtering (real API)
-    // ────────────────────────────────────────────────────────────────
-
-    @Test @Order(20)
-    @DisplayName("getTracksForGame returns tracks for Pop genre with previews, no duplicates")
-    void getTracksForGame_popGenre() throws Exception {
-        List<Track> tracks = service.getTracksForGame("Pop", null, "us", 5);
-
-        assertThat(tracks).isNotEmpty();
-        assertThat(tracks.size()).isLessThanOrEqualTo(5);
-        // All tracks must have preview URLs (business rule)
-        assertThat(tracks).allSatisfy(t -> assertThat(t.previewUrl()).isNotBlank());
-        // No duplicate title+artist
-        long uniqueCount = tracks.stream()
-                .map(t -> t.title().toLowerCase() + "|" + t.artist().toLowerCase())
-                .distinct().count();
-        assertThat(uniqueCount).isEqualTo(tracks.size());
-    }
-
-    @Test @Order(21)
-    @DisplayName("getTracksForGame filters by decade correctly")
-    void getTracksForGame_decade() throws Exception {
-        List<Track> tracks = service.getTracksForGame(null, "2010s", "us", 5);
-
-        assertThat(tracks).isNotEmpty();
-        assertThat(tracks).allSatisfy(t ->
-            assertThat(t.releaseYear()).isBetween(2010, 2019)
-        );
-    }
-
-    @Test @Order(22)
-    @DisplayName("getTracksForGame applies both genre and decade filters")
-    void getTracksForGame_genreAndDecade() throws Exception {
-        List<Track> tracks = service.getTracksForGame("Rock", "2000s", "us", 5);
-
-        assertThat(tracks).isNotEmpty();
-        assertThat(tracks).allSatisfy(t ->
-            assertThat(t.releaseYear()).isBetween(2000, 2009)
-        );
-    }
-
-    // ────────────────────────────────────────────────────────────────
     //  enrichWithMusicVideos — real API lookup
     // ────────────────────────────────────────────────────────────────
 
@@ -189,13 +160,5 @@ class AppleMusicCatalogServiceTest {
 
     private String invokeNormalize(String input) {
         return ReflectionTestUtils.invokeMethod(service, "normalize", input);
-    }
-
-    private int invokeParseDecade(String decade) {
-        return ReflectionTestUtils.invokeMethod(service, "parseDecadeStartYear", decade);
-    }
-
-    private String invokeBuildSearchTerm(String genre, String decade) {
-        return ReflectionTestUtils.invokeMethod(service, "buildSearchTerm", genre, decade);
     }
 }

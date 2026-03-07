@@ -43,12 +43,11 @@ public class DevController {
 
     @GetMapping("/query-game-tracks")
     public ResponseEntity<?> queryGameTracks(
-            @RequestParam(required = false) String genre,
-            @RequestParam(required = false) String decade,
+            @RequestParam(required = false) String searchTerm,
             @RequestParam(defaultValue = "se") String storefront,
             @RequestParam(defaultValue = "5") int count) {
         try {
-            List<Track> tracks = musicCatalogService.getTracksForGame(genre, decade, storefront, count);
+            List<Track> tracks = musicCatalogService.getTracksForGame(searchTerm, storefront, count);
             return ResponseEntity.ok(tracks);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
