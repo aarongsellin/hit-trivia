@@ -2,9 +2,6 @@
   <div class="landing">
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-glow"></div>
-      <div class="hero-glow hero-glow--secondary"></div>
-
       <nav class="nav">
         <div class="nav-logo">
           <span class="logo-text">Hit Trivia</span>
@@ -16,76 +13,34 @@
       </nav>
 
       <div class="hero-content">
-        <div class="hero-badge">
-          <span class="badge-pulse"></span>
-          Music Trivia Game
-        </div>
-
-        <h1 class="hero-title">
-          Think you know<br />
-          <span class="hero-title--gradient">your music?</span>
-        </h1>
-
-        <p class="hero-subtitle">
-          Challenge your friends to guess songs from short clips. Put your music
-          knowledge to the test.
-        </p>
-
-        <div class="hero-actions">
-          <button
-            @click="createGame"
-            class="btn btn--primary"
-            :disabled="isLoading"
-          >
-            <span v-if="!isLoading">Create Game</span>
-            <span v-else>Creating...</span>
-          </button>
-
-          <button @click="scrollToHowItWorks" class="btn btn--ghost">
-            How it works
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+        <div class="hero-left">
+          <p class="hero-kicker">Music Trivia</p>
+          <h1 class="hero-title">Think you<br />know<br /><em>music?</em></h1>
+          <p class="hero-subtitle">
+            Guess songs from short clips. Challenge your friends. See who really
+            knows their music.
+          </p>
+          <div class="hero-actions">
+            <button
+              @click="createGame"
+              class="btn btn--primary"
+              :disabled="isLoading"
             >
-              <path d="M4 6l4 4 4-4" />
-            </svg>
-          </button>
+              <span v-if="!isLoading">Create a game</span>
+              <span v-else>Creating…</span>
+            </button>
+            <button @click="scrollToHowItWorks" class="btn btn--ghost">
+              How it works
+            </button>
+          </div>
         </div>
 
-        <div class="hero-affiliate">
-          <a
-            :href="affiliateUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="apple-badge-link"
-            aria-label="Listen on Apple Music"
-          >
-            <img
-              :src="appleBadge"
-              alt="Listen on Apple Music"
-              class="apple-badge"
-            />
-          </a>
-        </div>
-
-        <div class="hero-visual">
-          <div class="waveform">
-            <div
-              v-for="i in 100"
-              :key="i"
-              class="waveform-bar"
-              :style="{
-                animationDelay: `${i * 0.05}s`,
-                height: `${
-                  100 + Math.sin(i * 0.5) * 15 + Math.random() * 20
-                }px`,
-                width: `100vw`,
-              }"
-            ></div>
+        <div class="hero-right">
+          <div class="vinyl">
+            <div class="vinyl-label">
+              <span class="vinyl-label-title">HIT</span>
+              <span class="vinyl-label-sub">TRIVIA</span>
+            </div>
           </div>
         </div>
       </div>
@@ -156,7 +111,7 @@
 
         <div class="beta-banner">
           <span class="beta-tag">BETA</span>
-          Song gneeration is in an experimental phase - Searches are hit or miss
+          Song generation is in an experimental phase - Searches are hit or miss
         </div>
 
         <div class="steps">
@@ -233,7 +188,16 @@
     </section>
 
     <footer class="footer">
-      <p>Built with love &dash; Hit Trivia</p>
+      <p>
+        Built by
+        <a
+          href="https://aarongsellin.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="footer-link"
+          >aarongsellin.dev</a
+        >
+      </p>
       <p class="footer-apple">
         Apple Music and the Apple Music logo are trademarks of Apple Inc.
       </p>
@@ -437,7 +401,7 @@ export default {
 
 .landing {
   min-height: 100vh;
-  background: #ffffff;
+  background: #fdf7e5;
   color: #1a1a1a;
 }
 
@@ -456,6 +420,10 @@ export default {
   padding: 24px 32px;
   max-width: 1080px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  gap: 16px;
 }
 
 .nav-logo {
@@ -464,7 +432,7 @@ export default {
   gap: 10px;
   font-weight: 700;
   font-size: 18px;
-  color: #1a1a1a;
+  color: #fff;
 }
 
 .logo-icon {
@@ -481,8 +449,9 @@ export default {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.45);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .stat-dot {
@@ -506,89 +475,126 @@ export default {
 /* ─── Hero ─────────────────────────────────────── */
 
 .hero {
-  position: relative;
-  overflow: hidden;
-  padding-bottom: 80px;
-}
-
-.hero-glow {
-  position: absolute;
-  top: -200px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 800px;
-  height: 600px;
-  background: radial-gradient(
-    ellipse,
-    rgba(250, 45, 72, 0.06) 0%,
-    transparent 70%
-  );
-  pointer-events: none;
-}
-
-.hero-glow--secondary {
-  top: -100px;
-  left: 30%;
-  width: 600px;
-  background: radial-gradient(
-    ellipse,
-    rgba(139, 92, 246, 0.04) 0%,
-    transparent 70%
-  );
+  background: #111;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .hero-content {
+  flex: 1;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 60px 32px 0;
-  text-align: center;
-}
-
-.hero-badge {
-  display: inline-flex;
+  padding: 60px 32px 80px;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  background: #fff0f2;
-  border: 1px solid #fecdd3;
-  color: #e11d48;
-  padding: 6px 16px;
-  border-radius: 100px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 32px;
-  letter-spacing: 0.3px;
+  gap: 80px;
+  width: 100%;
 }
 
-.badge-pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e11d48;
-  animation: pulse-dot 1.5s ease-in-out infinite;
+.hero-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: #e11d48;
+  margin-bottom: 20px;
 }
 
 .hero-title {
-  font-size: clamp(42px, 7vw, 76px);
+  font-size: clamp(52px, 8vw, 96px);
   font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -2px;
-  color: #1a1a1a;
-  margin-bottom: 24px;
+  line-height: 1;
+  letter-spacing: -3px;
+  color: #fff;
+  margin-bottom: 28px;
 }
 
-.hero-title--gradient {
-  background: linear-gradient(135deg, #e11d48 0%, #9333ea 50%, #2563eb 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.hero-title em {
+  font-style: italic;
+  color: #e11d48;
 }
 
 .hero-subtitle {
   font-size: 18px;
   line-height: 1.7;
-  color: #6b7280;
-  max-width: 520px;
-  margin: 0 auto 48px;
+  color: #888;
+  max-width: 440px;
+  margin-bottom: 48px;
   font-weight: 400;
+}
+
+.hero-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Vinyl Record ─────────────────────────────── */
+
+.vinyl {
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle at center,
+    #111 0px,
+    #2a2a2a 2px,
+    #111 6px,
+    #222 8px,
+    #111 12px
+  );
+  position: relative;
+  animation: vinyl-spin 10s linear infinite;
+  box-shadow: 0 0 120px rgba(225, 29, 72, 0.2), 0 32px 80px rgba(0, 0, 0, 0.8);
+}
+
+.vinyl-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: #e11d48;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.vinyl-label-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.vinyl-label-sub {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+@keyframes vinyl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── Buttons ──────────────────────────────────── */
@@ -596,7 +602,6 @@ export default {
 .hero-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -657,35 +662,30 @@ export default {
   border-radius: 14px;
 }
 
-/* ─── Waveform Visual ──────────────────────────── */
+/* ─── Hero button overrides (dark background) ─── */
 
-.hero-visual {
-  margin-top: 64px;
+.hero .btn--primary {
+  background: #e11d48;
+  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.3),
+    0 4px 16px rgba(225, 29, 72, 0.15);
 }
 
-.waveform {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 3px;
-  height: 60px;
-  opacity: 0.35;
+.hero .btn--primary:hover:not(:disabled) {
+  background: #be123c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.4),
+    0 8px 24px rgba(225, 29, 72, 0.2);
 }
 
-.waveform-bar {
-  width: 4px;
-  border-radius: 4px;
-  background: linear-gradient(to top, #e11d48, #9333ea);
-  animation: wave 1.8s ease-in-out infinite alternate;
+.hero .btn--ghost {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
 }
 
-@keyframes wave {
-  0% {
-    transform: scaleY(0.4);
-  }
-  100% {
-    transform: scaleY(1);
-  }
+.hero .btn--ghost:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* ─── Live Marquee ─────────────────────────────── */
@@ -694,9 +694,9 @@ export default {
   position: relative;
   overflow: hidden;
   padding: 20px 0;
-  background: #fafafa;
-  border-top: 1px solid #f3f4f6;
-  border-bottom: 1px solid #f3f4f6;
+  background: #ffffff;
+  border-top: 1px solid #e8e3db;
+  border-bottom: 1px solid #e8e3db;
 }
 
 .marquee-label {
@@ -708,7 +708,7 @@ export default {
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
-  background: #fafafa;
+  background: #ffffff;
   padding: 6px 16px 6px 8px;
   font-size: 12px;
   font-weight: 600;
@@ -767,8 +767,8 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: #f9f7f0;
+  border: 1px solid #e8e3db;
   border-radius: 100px;
   padding: 8px 16px;
   white-space: nowrap;
@@ -856,14 +856,14 @@ export default {
   text-align: center;
   padding: 40px 28px;
   border-radius: 20px;
-  background: #fafafa;
-  border: 1px solid #f3f4f6;
+  background: #ffffff;
+  border: 1px solid #e8e3db;
   transition: all 0.3s ease;
 }
 
 .step:hover {
-  background: #f5f5f5;
-  border-color: #e5e7eb;
+  background: #e8e3db;
+  border-color: #d6d0c4;
   transform: translateY(-4px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
@@ -915,14 +915,14 @@ export default {
 .feature {
   padding: 28px 24px;
   border-radius: 16px;
-  background: #fafafa;
-  border: 1px solid #f3f4f6;
+  background: #ffffff;
+  border: 1px solid #e8e3db;
   transition: all 0.3s ease;
 }
 
 .feature:hover {
-  background: #f5f5f5;
-  border-color: #e5e7eb;
+  background: #e8e3db;
+  border-color: #d6d0c4;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
@@ -956,8 +956,8 @@ export default {
   text-align: center;
   padding: 80px 40px;
   border-radius: 24px;
-  background: #fafafa;
-  border: 1px solid #f3f4f6;
+  background: #ffffff;
+  border: 1px solid #e8e3db;
 }
 
 .cta-glow {
@@ -1086,15 +1086,25 @@ export default {
 .footer {
   text-align: center;
   padding: 40px 24px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid #e8e3db;
   font-size: 13px;
-  color: #000000;
+  color: #6b7280;
+}
+
+.footer-link {
+  color: #1a1a1a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
 }
 
 .footer-apple {
   margin-top: 8px;
   font-size: 11px;
-  color: #afb0b3;
+  color: #b0aaa2;
 }
 
 /* responsive */
@@ -1111,7 +1121,18 @@ export default {
   }
 
   .hero-content {
-    padding: 40px 20px 0;
+    flex-direction: column;
+    padding: 40px 20px 60px;
+    gap: 40px;
+  }
+
+  .hero-right {
+    order: -1;
+  }
+
+  .vinyl {
+    width: 280px;
+    height: 280px;
   }
 
   .hero-subtitle {
@@ -1142,14 +1163,6 @@ export default {
 
   .affiliate-card {
     padding: 40px 20px;
-  }
-
-  .waveform {
-    gap: 2px;
-  }
-
-  .waveform-bar {
-    width: 3px;
   }
 }
 </style>
