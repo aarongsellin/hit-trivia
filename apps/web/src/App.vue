@@ -25,9 +25,14 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #ffffff;
+  background: #fdf7e5;
   color: #1a1a1a;
   overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
+  background: #fdf7e5;
 }
 
 a {

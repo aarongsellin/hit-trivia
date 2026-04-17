@@ -1,5 +1,15 @@
 <template>
   <div class="landing">
+    <!-- Page transition overlay -->
+    <div class="page-transition" :class="{ active: isTransitioning, 'fading-out': isFadingOut }">
+      <div class="pt-vinyl">
+        <div class="pt-vinyl-label">
+          <span class="pt-vinyl-title">HIT</span>
+          <span class="pt-vinyl-sub">TRIVIA</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Hero Section -->
     <section class="hero">
       <nav class="nav">
@@ -48,51 +58,53 @@
 
     <!-- Live Games Marquee -->
     <section v-if="activeGames.length > 0" class="live-marquee">
-      <div class="marquee-label">
-        <span class="marquee-dot"></span>
-        Live now
-      </div>
-      <div class="marquee-track" ref="marqueeTrack">
-        <div class="marquee-inner">
-          <div
-            class="marquee-card"
-            v-for="(game, i) in repeatedGames"
-            :key="'a-' + i"
-          >
-            <div class="marquee-card-icon">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M9 18V5l12-2v13" />
-                <circle cx="6" cy="18" r="3" />
-                <circle cx="18" cy="16" r="3" />
-              </svg>
+      <div class="marquee-row">
+        <div class="marquee-label">
+          <span class="marquee-dot"></span>
+          Live now
+        </div>
+        <div class="marquee-track">
+          <div class="marquee-inner" :class="{ scrolling: canScroll }">
+            <div
+              class="marquee-card"
+              v-for="(game, i) in repeatedGames"
+              :key="'a-' + i"
+            >
+              <div class="marquee-card-icon">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+              </div>
+              <span class="marquee-card-text">
+                <strong>{{ game.host }}</strong>
+                <template v-if="game.players > 1">
+                  and {{ game.players - 1 }}
+                  {{ game.players === 2 ? 'friend' : 'friends' }}</template
+                >
+                {{ game.players === 1 ? 'is' : 'are' }} listening to
+                <span class="marquee-card-tag" v-if="game.decade && game.genre"
+                  >{{ game.decade }} {{ game.genre }}</span
+                >
+                <span class="marquee-card-tag" v-else-if="game.decade"
+                  >{{ game.decade }} music</span
+                >
+                <span class="marquee-card-tag" v-else-if="game.genre">{{
+                  game.genre
+                }}</span>
+                <span class="marquee-card-tag" v-else>music</span>
+              </span>
             </div>
-            <span class="marquee-card-text">
-              <strong>{{ game.host }}</strong>
-              <template v-if="game.players > 1">
-                and {{ game.players - 1 }}
-                {{ game.players === 2 ? 'friend' : 'friends' }}</template
-              >
-              {{ game.players === 1 ? 'is' : 'are' }} listening to
-              <span class="marquee-card-tag" v-if="game.decade && game.genre"
-                >{{ game.decade }} {{ game.genre }}</span
-              >
-              <span class="marquee-card-tag" v-else-if="game.decade"
-                >{{ game.decade }} music</span
-              >
-              <span class="marquee-card-tag" v-else-if="game.genre">{{
-                game.genre
-              }}</span>
-              <span class="marquee-card-tag" v-else>music</span>
-            </span>
           </div>
         </div>
       </div>
@@ -229,6 +241,8 @@ export default {
       activeGames: [],
       affiliateToken: '',
       isLoading: false,
+      isTransitioning: false,
+      isFadingOut: false,
       steps: [
         {
           icon: 'headphones',
@@ -289,17 +303,14 @@ export default {
       return `${base}?at=${encodeURIComponent(this.affiliateToken)}`;
     },
     repeatedGames() {
-      // Duplicate games enough times so the marquee can scroll continuously
+      // Two copies is all the CSS marquee needs to loop seamlessly (scrolls to -50% then resets)
       if (this.activeGames.length === 0) return [];
-      const minCards = 20;
-      const repeats = Math.ceil(minCards / this.activeGames.length);
-      const result = [];
-      for (let r = 0; r < repeats * 2; r++) {
-        for (const game of this.activeGames) {
-          result.push(game);
-        }
-      }
-      return result;
+      return [...this.activeGames, ...this.activeGames];
+    },
+    canScroll() {
+      // Only scroll if there are enough cards to actually fill the track
+      // A rough heuristic: more than 4 unique games, or window is narrow
+      return this.activeGames.length > 4;
     },
   },
   methods: {
@@ -350,15 +361,25 @@ export default {
       this.isLoading = true;
 
       try {
-        const res = await fetch('/api/new-game');
+        const [res] = await Promise.all([
+          fetch('/api/new-game'),
+          new Promise((resolve) => {
+            this.isTransitioning = true;
+            setTimeout(resolve, 1100);
+          }),
+        ]);
         const resJson = await res.json();
         const id = resJson.data.id;
 
         if (id) {
+          // Fade vinyl out + warm bg, then navigate
+          this.isFadingOut = true;
+          await new Promise((resolve) => setTimeout(resolve, 700));
           this.router.push({ path: '/game', query: { id } });
         }
       } catch {
-        // silently ignore
+        this.isTransitioning = false;
+        this.isFadingOut = false;
       } finally {
         this.isLoading = false;
       }
@@ -371,6 +392,99 @@ export default {
 </script>
 
 <style scoped>
+/* ─── Page Transition Overlay ──────────────────── */
+
+.page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.85s cubic-bezier(0.76, 0, 0.24, 1);
+  pointer-events: none;
+}
+
+.page-transition.active {
+  clip-path: inset(0 0% 0 0);
+  pointer-events: all;
+}
+
+.pt-vinyl {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle at center,
+    #111 0px,
+    #2a2a2a 2px,
+    #111 6px,
+    #222 8px,
+    #111 12px
+  );
+  position: relative;
+  animation: vinyl-spin-fast 2.5s linear infinite;
+  box-shadow: 0 0 100px rgba(225, 29, 72, 0.3), 0 0 40px rgba(225, 29, 72, 0.15);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.4s ease 0.4s, transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s;
+}
+
+.page-transition.active .pt-vinyl {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pt-vinyl-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: #e11d48;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.pt-vinyl-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.pt-vinyl-sub {
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.page-transition.fading-out {
+  background: #fdf7e5;
+  transition: background 0.6s ease;
+}
+
+.page-transition.fading-out .pt-vinyl {
+  opacity: 0 !important;
+  transform: scale(0.7) !important;
+  transition: opacity 0.5s ease, transform 0.5s ease !important;
+}
+
+@keyframes vinyl-spin-fast {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ─── Beta Banner ──────────────────────────────── */
 
 .beta-banner {
@@ -403,6 +517,7 @@ export default {
   min-height: 100vh;
   background: #fdf7e5;
   color: #1a1a1a;
+  overflow-x: hidden;
 }
 
 .section-container {
@@ -480,6 +595,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .hero-content {
@@ -691,30 +807,43 @@ export default {
 /* ─── Live Marquee ─────────────────────────────── */
 
 .live-marquee {
-  position: relative;
-  overflow: hidden;
-  padding: 20px 0;
   background: #ffffff;
   border-top: 1px solid #e8e3db;
   border-bottom: 1px solid #e8e3db;
+  padding: 12px 0;
+}
+
+.marquee-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
 }
 
 .marquee-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  position: absolute;
-  left: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  background: #ffffff;
-  padding: 6px 16px 6px 8px;
+  flex-shrink: 0;
+  padding: 6px 20px 6px 24px;
   font-size: 12px;
   font-weight: 600;
   color: #22c55e;
   text-transform: uppercase;
   letter-spacing: 1px;
+  background: #ffffff;
+  z-index: 2;
+  position: relative;
+}
+
+.marquee-label::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to right, #ffffff, transparent);
 }
 
 .marquee-dot {
@@ -727,17 +856,18 @@ export default {
 
 .marquee-track {
   overflow: hidden;
+  flex: 1;
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 10%,
+    black 4%,
     black 90%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 10%,
+    black 4%,
     black 90%,
     transparent 100%
   );
@@ -747,10 +877,14 @@ export default {
   display: flex;
   gap: 12px;
   width: max-content;
+  padding: 8px 0;
+}
+
+.marquee-inner.scrolling {
   animation: marquee-scroll 60s linear infinite;
 }
 
-.marquee-inner:hover {
+.marquee-inner.scrolling:hover {
   animation-play-state: paused;
 }
 

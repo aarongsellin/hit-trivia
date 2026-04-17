@@ -683,10 +683,16 @@ export default {
   width: 100%;
   min-height: 100vh;
   padding: 20px;
-  background: #f5f5f5;
+  background: #fdf7e5;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #333;
   position: relative;
+  animation: page-fade-in 0.6s ease both;
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Progress Bar */
@@ -839,6 +845,18 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 70vh;
+  animation: name-entry-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+@keyframes name-entry-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .name-entry-container {
