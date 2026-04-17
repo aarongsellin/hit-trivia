@@ -1,7 +1,12 @@
 services:
   app:
-    build: .
+    image: ghcr.io/aarongsellin/hit-trivia:latest
     ports:
-      - '8080:8080'
+      - '80:8080'
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - APPLE_MUSIC_TEAM_ID=${APPLE_MUSIC_TEAM_ID}
+      - APPLE_MUSIC_KEY_ID=${APPLE_MUSIC_KEY_ID}
+      - APPLE_MUSIC_PRIVATE_KEY=${APPLE_MUSIC_PRIVATE_KEY}
     volumes:
       - ./apps/backend/src/main/resources/application-local.properties:/app/config/application-local.properties:ro
