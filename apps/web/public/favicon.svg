@@ -1,21 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="url(#g)"/>
-  <g fill="#fff">
-    <!-- note head left -->
-    <ellipse cx="18" cy="44" rx="8" ry="6" transform="rotate(-20 18 44)"/>
-    <!-- note head right -->
-    <ellipse cx="40" cy="38" rx="8" ry="6" transform="rotate(-20 40 38)"/>
-    <!-- stem left -->
-    <rect x="24.5" y="14" width="3.5" height="32" rx="1.5"/>
-    <!-- stem right -->
-    <rect x="46.5" y="8" width="3.5" height="32" rx="1.5"/>
-    <!-- beam -->
-    <polygon points="24.5,14 50,8 50,13 24.5,19"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="28" fill="#e11d48"/>
+  <text x="64" y="104" font-size="144" text-anchor="middle" font-family="serif" fill="#fff">𝄞</text>
 </svg>

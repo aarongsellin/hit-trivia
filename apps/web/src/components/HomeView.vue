@@ -17,6 +17,7 @@
     <section class="hero">
       <nav class="nav">
         <div class="nav-logo">
+          <span class="nav-clef">𝄞</span>
           <span class="logo-text">Hit Trivia</span>
         </div>
         <div v-if="totalGameCount > 0" class="nav-stat">
@@ -552,10 +553,18 @@ export default {
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   font-weight: 700;
   font-size: 18px;
   color: #fff;
+}
+
+.nav-clef {
+  font-family: serif;
+  font-size: 40px;
+  line-height: 1;
+  color: #e11d48;
+  margin-top: -2px;
 }
 
 .logo-icon {
