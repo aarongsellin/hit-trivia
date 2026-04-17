@@ -1,7 +1,10 @@
 <template>
   <div class="landing">
     <!-- Page transition overlay -->
-    <div class="page-transition" :class="{ active: isTransitioning, 'fading-out': isFadingOut }">
+    <div
+      class="page-transition"
+      :class="{ active: isTransitioning, 'fading-out': isFadingOut }"
+    >
       <div class="pt-vinyl">
         <div class="pt-vinyl-label">
           <span class="pt-vinyl-title">HIT</span>
@@ -429,7 +432,8 @@ export default {
   box-shadow: 0 0 100px rgba(225, 29, 72, 0.3), 0 0 40px rgba(225, 29, 72, 0.15);
   opacity: 0;
   transform: scale(0.6);
-  transition: opacity 0.4s ease 0.4s, transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s;
+  transition: opacity 0.4s ease 0.4s,
+    transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s;
 }
 
 .page-transition.active .pt-vinyl {
@@ -481,8 +485,12 @@ export default {
 }
 
 @keyframes vinyl-spin-fast {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── Beta Banner ──────────────────────────────── */
