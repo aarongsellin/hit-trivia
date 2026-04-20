@@ -29,8 +29,10 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         configuration.setAllowedOriginPatterns(Arrays.asList(
-        "https://*.arodeploy.com",
-            "http://localhost:3000"
+            "https://*.arodeploy.com",
+            "https://arodeploy.com",
+            "http://localhost:3000",
+            "http://localhost:*"
         ));
         configuration.setAllowCredentials(true);
 

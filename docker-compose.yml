@@ -8,5 +8,3 @@ services:
       - APPLE_MUSIC_TEAM_ID=${APPLE_MUSIC_TEAM_ID}
       - APPLE_MUSIC_KEY_ID=${APPLE_MUSIC_KEY_ID}
       - APPLE_MUSIC_PRIVATE_KEY=${APPLE_MUSIC_PRIVATE_KEY}
-    volumes:
-      - ./apps/backend/src/main/resources/application-local.properties:/app/config/application-local.properties:ro

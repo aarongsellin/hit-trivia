@@ -47,24 +47,6 @@
       ></span>
     </button>
 
-    <!-- DEBUG: Uncomment for development
-    <div class="header">
-      <p>Status: {{ socket.status }}</p>
-      <p>
-        Player ID: <b>{{ playerId }}</b>
-      </p>
-      <p>GameState: {{ gameState }}</p>
-      <div class="debug-buttons">
-        <button @click="sendMessage(inputMessage)">Send</button>
-        <button @click="clearStorage()">CLEAR</button>
-        <button @click="socket.close()">CLOSE</button>
-        <button @click="socket.open()">OPEN</button>
-        <button @click="test()">JOIN</button>
-      </div>
-    </div>
-    -->
-
-    <!-- Name Entry Screen -->
     <div v-if="!playerName && !waitingForServer" class="name-entry-phase">
       <div class="name-entry-container">
         <div class="name-entry-icon">
@@ -136,18 +118,6 @@
       @submit-guess="handleGuessSubmit"
     />
 
-    <!-- Preload current track's music video during play/guess phases -->
-    <link
-      v-if="
-        (gameState === 'PLAYING_MUSIC' || gameState === 'GUESSING') &&
-        currentTrack?.musicVideoUrl
-      "
-      rel="preload"
-      :href="currentTrack.musicVideoUrl"
-      as="video"
-      type="video/mp4"
-    />
-
     <RevealPhase
       v-else-if="gameState === 'REVEAL'"
       :track="currentTrack"
@@ -161,6 +131,26 @@
       :finalScores="finalScores"
       :playerId="playerId"
       @play-again="handlePlayAgain"
+    />
+
+    <!-- Connecting state: name submitted but no gameState yet -->
+    <div v-else-if="playerName && !gameState" class="connecting-phase">
+      <div class="connecting-inner">
+        <div class="connecting-spinner"></div>
+        <p>Connecting…</p>
+      </div>
+    </div>
+
+    <!-- Preload current track's music video during play/guess phases -->
+    <link
+      v-if="
+        (gameState === 'PLAYING_MUSIC' || gameState === 'GUESSING') &&
+        currentTrack?.musicVideoUrl
+      "
+      rel="preload"
+      :href="currentTrack.musicVideoUrl"
+      as="video"
+      type="video/mp4"
     />
 
     <!-- Initial Loading - Not joined yet -->
@@ -942,5 +932,38 @@ export default {
 .name-submit-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ─── Connecting State ─────────────────────────── */
+
+.connecting-phase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.connecting-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #9ca3af;
+  font-size: 15px;
+}
+
+.connecting-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #e11d48;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

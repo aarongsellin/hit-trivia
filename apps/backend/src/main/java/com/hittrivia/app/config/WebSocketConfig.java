@@ -26,7 +26,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
         // domains can also access the socket
         webSocketHandlerRegistry
             .addHandler(gameSocketHandler, "/ws/game/{room}")
-            .setAllowedOriginPatterns("https://*.arodeploy.com", "http://localhost:3000");
+            .setAllowedOriginPatterns("https://*.arodeploy.com", "https://arodeploy.com", "http://localhost:3000", "http://localhost:*");
 
     }
 }

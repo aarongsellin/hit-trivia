@@ -292,13 +292,6 @@ export default {
   mounted() {
     this.fetchGameCount();
     this.fetchActiveGames();
-    this._activeGamesInterval = setInterval(
-      () => this.fetchActiveGames(),
-      15000
-    );
-  },
-  beforeUnmount() {
-    if (this._activeGamesInterval) clearInterval(this._activeGamesInterval);
   },
   computed: {
     affiliateUrl() {
