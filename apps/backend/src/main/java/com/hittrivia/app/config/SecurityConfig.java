@@ -9,9 +9,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-// import java.util.ArrayList;
 import java.util.Arrays;
-// import java.util.List;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -22,18 +22,13 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .collect(Collectors.toList());
         CorsConfiguration configuration = new CorsConfiguration();
-        // List<String> origins = new ArrayList<>(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "https://*.arodeploy.com",
-            "https://arodeploy.com",
-            "http://localhost:3000",
-            "http://localhost:*"
-        ));
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

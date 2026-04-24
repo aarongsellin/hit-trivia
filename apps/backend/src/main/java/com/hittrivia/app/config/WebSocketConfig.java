@@ -1,5 +1,6 @@
 package com.hittrivia.app.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -11,6 +12,9 @@ import com.hittrivia.app.handlers.GameSocketHandler;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
     private final GameSocketHandler gameSocketHandler;
+
+    @Value("${ALLOWED_ORIGINS:http://localhost:3000}")
+    private String allowedOrigins;
 
     public WebSocketConfig(GameSocketHandler gameSocketHandler) {
         this.gameSocketHandler = gameSocketHandler;
@@ -24,9 +28,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
         // created before with End point Also we are managing
         // the CORS policy for the handlers so that other
         // domains can also access the socket
+        String[] origins = allowedOrigins.split(",");
         webSocketHandlerRegistry
             .addHandler(gameSocketHandler, "/ws/game/{room}")
-            .setAllowedOriginPatterns("https://*.arodeploy.com", "https://arodeploy.com", "http://localhost:3000", "http://localhost:*");
+            .setAllowedOriginPatterns(origins);
 
     }
 }
