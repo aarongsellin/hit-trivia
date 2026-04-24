@@ -2,7 +2,7 @@
 
 A real-time multiplayer music trivia game. Create a game, invite friends with a QR code, and see who can guess the song from a short clip.
 
-**Live:** [hit-trivia-production.up.railway.app](https://hit-trivia-production.up.railway.app)
+**Live:** [hittrivia.com](https://hittrivia.com)
 
 ## How It Works
 
