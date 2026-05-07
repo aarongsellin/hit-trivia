@@ -246,17 +246,11 @@ public class Game {
      */
     private int[] getNextPhaseDuration(Phase forPhase) {
         return switch (forPhase) {
-            case WAITING       -> new int[]{ Phase.PLAYING_MUSIC.ordinal(), PhaseDelays.WAIT_DELAY };
-            case PLAYING_MUSIC -> new int[]{ Phase.GUESSING.ordinal(), PhaseDelays.MUSIC_DELAY };
-            case GUESSING      -> new int[]{ Phase.REVEAL.ordinal(), PhaseDelays.GUESS_DELAY };
-            case REVEAL -> {
-                int nextRound = currentRound + 1;
-                if (nextRound < quizz.getTracks().size()) {
-                    yield new int[]{ Phase.WAITING.ordinal(), PhaseDelays.REVEAL_DELAY };
-                } else {
-                    yield new int[]{ Phase.FINISHED.ordinal(), PhaseDelays.REVEAL_DELAY };
-                }
-            }
+            case WAITING        -> new int[]{ Phase.PLAYING_MUSIC.ordinal(), PhaseDelays.WAIT_DELAY };
+            case PLAYING_MUSIC  -> null; // WAITING_REPLAY is host-controlled, no pre-announcement
+            case GUESSING       -> new int[]{ Phase.REVEAL.ordinal(), PhaseDelays.GUESS_DELAY };
+            case WAITING_REPLAY -> null; // host-controlled, no pre-announcement
+            case REVEAL         -> null; // host-controlled, no pre-announcement
             default -> null;
         };
     }
@@ -267,28 +261,28 @@ public class Game {
                 // Initial config phase — no automatic transition; host starts the game.
                 break;
             case WAITING:
-                // A wait for start.
+                // Broadcast current round so clients have the correct round before PLAYING_MUSIC starts
+                broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
                 startPhaseWithTimer(Phase.PLAYING_MUSIC, PhaseDelays.WAIT_DELAY);
                 break;
             case PLAYING_MUSIC:
                 // Broadcast current round so frontend knows which track to play
                 broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
-                // Start the guessing phase after the music has played.
-                startPhaseWithTimer(Phase.GUESSING, PhaseDelays.MUSIC_DELAY);
+                // After music plays, move to WAITING_REPLAY so host can decide to replay or continue
+                startPhaseWithTimer(Phase.WAITING_REPLAY, PhaseDelays.MUSIC_DELAY);
                 break;
             case GUESSING:
                 // Start reveal phase after the guessing phase is done.
                 startPhaseWithTimer(Phase.REVEAL, PhaseDelays.GUESS_DELAY);
                 break;
+            case WAITING_REPLAY:
+                // Host-controlled: wait for admin to trigger replay or continue to reveal.
+                break;
             case REVEAL:
                 // Broadcast current round for reveal phase
                 broadcastMessage(MessageType.DATA, Map.of("currentRound", currentRound));
                 currentRound++;
-                if (currentRound < quizz.getTracks().size()) {
-                    startPhaseWithTimer(Phase.WAITING, PhaseDelays.REVEAL_DELAY);
-                } else {
-                    startPhaseWithTimer(Phase.FINISHED, PhaseDelays.REVEAL_DELAY);
-                }
+                // Host-controlled: wait for admin to call triggerNextRound()
                 break;
             case FINISHED:
                 broadcastFinalScores();
@@ -372,11 +366,57 @@ public class Game {
         }
     }
 
+    /**
+     * Immediately switches to the given phase (no countdown), then triggers
+     * the phase transition logic. Used for host-initiated phase changes.
+     */
+    private void setPhaseImmediately(Phase newPhase) {
+        if (currentTask != null && !currentTask.isDone()) {
+            currentTask.cancel(false);
+        }
+        this.phaseStartTimestamp = 0;
+        this.phaseEndTimestamp = 0;
+        this.nextPhase = null;
+        this.phase = newPhase;
+        broadcastMessage(MessageType.DATA, Map.of("phase", Map.of("newPhase", newPhase.toString())));
+        handlePhaseTransition(newPhase);
+    }
+
+    /**
+     * Called by the admin to replay the current track's music.
+     * Restarts the PLAYING_MUSIC phase (same round) followed by WAITING_REPLAY.
+     */
+    public void triggerReplay() {
+        setPhaseImmediately(Phase.PLAYING_MUSIC);
+    }
+
+    /**
+     * Called by the admin to continue to the reveal phase after WAITING_REPLAY.
+     * Switches to REVEAL immediately (no countdown delay).
+     */
+    public void triggerContinue() {
+        setPhaseImmediately(Phase.REVEAL);
+    }
+
+    /**
+     * Called by the admin during REVEAL to proceed to the next round or end the game.
+     */
+    public void triggerNextRound() {
+        if (currentRound < quizz.getTracks().size()) {
+            setPhaseImmediately(Phase.WAITING);
+        } else {
+            setPhaseImmediately(Phase.FINISHED);
+        }
+    }
+        
+    
+
     public enum Phase {
         WAITING,
         WAITING_CONFIG,
         PLAYING_MUSIC,
         GUESSING,
+        WAITING_REPLAY,
         REVEAL,
         FINISHED,
     }
@@ -384,8 +424,7 @@ public class Game {
     public static class PhaseDelays {
         private static final int MUSIC_DELAY = 30;  
         private static final int GUESS_DELAY = 30;
-        private static final int REVEAL_DELAY = 30;
-        private static final int WAIT_DELAY = 10;
+        private static final int WAIT_DELAY = 5;
 
         private static final int FINISHED_DELAY = 120;
     }

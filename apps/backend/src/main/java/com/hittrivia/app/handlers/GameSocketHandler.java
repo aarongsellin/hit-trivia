@@ -156,6 +156,15 @@ public class GameSocketHandler extends TextWebSocketHandler {
             case "requestTracks":
                 handleRequestTracks(gameSession);
                 break;
+            case "replay":
+                handleActionReplay(gameSession);
+                break;
+            case "continue":
+                handleActionContinue(gameSession);
+                break;
+            case "nextRound":
+                handleActionNextRound(gameSession);
+                break;
             default:
                 System.out.println("Unknown action type:" + actionType);
                 break;
@@ -339,6 +348,72 @@ public class GameSocketHandler extends TextWebSocketHandler {
         
     }
 
+    private void handleActionReplay(GameWebSocketSession session) {
+        Game game = gameService.getGame(session.getGameId());
+        if (game == null) return;
+        if (!game.isAdmin(session.getPlayerId())) {
+            try {
+                session.sendJsonMessage(MessageType.ERROR, Map.of("message", "Un-authorized request, you are not the admin."));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+        game.triggerReplay();
+    }
+
+    private void handleActionContinue(GameWebSocketSession session) {
+        Game game = gameService.getGame(session.getGameId());
+        if (game == null) return;
+        if (!game.isAdmin(session.getPlayerId())) {
+            try {
+                session.sendJsonMessage(MessageType.ERROR, Map.of("message", "Un-authorized request, you are not the admin."));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+        game.triggerContinue();
+        // triggerContinue() calls setPhaseImmediately(REVEAL) which synchronously
+        // increments currentRound. Display round = currentRound - 1.
+        int revealRound = game.getCurrentRound() - 1;
+        sessionContexts.values().forEach(s -> {
+            String playerId = s.getPlayerId();
+            if (playerId == null || !game.isPlayer(playerId)) return;
+            if (!s.getSession().isOpen()) return;
+            Game.GuessResult result = game.getGuessResultForRound(playerId, revealRound);
+            if (result != null) {
+                try {
+                    s.sendJsonMessage(MessageType.DATA, Map.of(
+                        "guessResult", Map.of(
+                            "round", result.round(),
+                            "titleScore", result.titleScore(),
+                            "artistScore", result.artistScore(),
+                            "albumScore", result.albumScore(),
+                            "total", result.total()
+                        )
+                    ));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private void handleActionNextRound(GameWebSocketSession session) {
+        Game game = gameService.getGame(session.getGameId());
+        if (game == null) return;
+        if (!game.isAdmin(session.getPlayerId())) {
+            try {
+                session.sendJsonMessage(MessageType.ERROR, Map.of("message", "Un-authorized request, you are not the admin."));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+        game.triggerNextRound();
+    }
+
     private void handleRequestTracks(GameWebSocketSession session) {
         Game game = gameService.getGame(session.getGameId());
         if (game == null) return;
@@ -363,12 +438,18 @@ public class GameSocketHandler extends TextWebSocketHandler {
         }
 
         session.sendJsonMessage(MessageType.DATA, Map.of("tracks", game.getQuizz().getTracks()));
-        session.sendJsonMessage(MessageType.DATA, Map.of("currentRound", game.getCurrentRound()));
+
+        // During REVEAL, currentRound has already been incremented to the next round.
+        // Send the display round so the player sees the correct track.
+        int displayRound = game.getPhase() == Game.Phase.REVEAL
+            ? game.getCurrentRound() - 1
+            : game.getCurrentRound();
+        session.sendJsonMessage(MessageType.DATA, Map.of("currentRound", displayRound));
 
         // Send the player's guess result for the current round (if any)
         String playerId = session.getPlayerId();
         if (playerId != null) {
-            Game.GuessResult result = game.getGuessResultForRound(playerId, game.getCurrentRound());
+            Game.GuessResult result = game.getGuessResultForRound(playerId, displayRound);
             if (result != null) {
                 session.sendJsonMessage(MessageType.DATA, Map.of(
                     "guessResult", Map.of(

@@ -144,10 +144,29 @@
           </div>
         </div>
 
-        <!-- Player didn't guess -->
+        <!-- No-guess message -->
         <div v-else class="no-guess">
           <p>You didn't submit a guess this round.</p>
         </div>
+      </div>
+
+      <!-- Host controls -->
+      <div v-if="isAdmin" class="host-controls">
+        <button class="btn-next-round" @click="$emit('next-round')">
+          Nästa runda
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -173,7 +192,12 @@ export default {
       type: Object,
       default: null,
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
+  emits: ['next-round'],
   data() {
     return {
       videoError: false,
@@ -360,6 +384,33 @@ audio {
   color: #999;
   font-size: 14px;
   margin: 0;
+}
+
+.host-controls {
+  margin-top: 28px;
+}
+
+.btn-next-round {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: #e11d48;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-next-round:hover {
+  background: #be123c;
+}
+
+.btn-next-round:active {
+  transform: scale(0.97);
 }
 
 @media (max-width: 768px) {

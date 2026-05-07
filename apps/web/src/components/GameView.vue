@@ -104,18 +104,28 @@
 
     <WaitingPhase v-else-if="gameState === 'WAITING'" />
 
-    <PlayingMusicPhase
+    <div
       v-else-if="gameState === 'PLAYING_MUSIC'"
-      :track="currentTrack"
-      :seek-offset="musicSeekOffset"
-      :muted="musicMuted"
-    />
+      class="playing-guessing-phase"
+    >
+      <PlayingMusicPhase
+        :track="currentTrack"
+        :seek-offset="musicSeekOffset"
+        :muted="musicMuted"
+      />
+      <GuessingPhase
+        :key="currentRound"
+        :game-id="gameId"
+        :current-round="currentRound"
+        @submit-guess="handleGuessSubmit"
+      />
+    </div>
 
-    <GuessingPhase
-      v-else-if="gameState === 'GUESSING'"
-      :game-id="gameId"
-      :current-round="currentRound"
-      @submit-guess="handleGuessSubmit"
+    <WaitingReplayPhase
+      v-else-if="gameState === 'WAITING_REPLAY'"
+      :is-admin="isAdmin"
+      @replay="handleReplay"
+      @continue="handleContinue"
     />
 
     <RevealPhase
@@ -124,6 +134,8 @@
       :musicDuration="musicDuration"
       :guessResult="guessResult"
       :muted="musicMuted"
+      :is-admin="isAdmin"
+      @next-round="handleNextRound"
     />
 
     <FinishedPhase
@@ -141,12 +153,9 @@
       </div>
     </div>
 
-    <!-- Preload current track's music video during play/guess phases -->
+    <!-- Preload current track's music video during playing phase -->
     <link
-      v-if="
-        (gameState === 'PLAYING_MUSIC' || gameState === 'GUESSING') &&
-        currentTrack?.musicVideoUrl
-      "
+      v-if="gameState === 'PLAYING_MUSIC' && currentTrack?.musicVideoUrl"
       rel="preload"
       :href="currentTrack.musicVideoUrl"
       as="video"
@@ -182,6 +191,7 @@ import PlayingMusicPhase from './phases/PlayingMusicPhase.vue';
 import GuessingPhase from './phases/GuessingPhase.vue';
 import RevealPhase from './phases/RevealPhase.vue';
 import FinishedPhase from './phases/FinishedPhase.vue';
+import WaitingReplayPhase from './phases/WaitingReplayPhase.vue';
 
 const isJson = (data) => {
   try {
@@ -201,6 +211,7 @@ export default {
     GuessingPhase,
     RevealPhase,
     FinishedPhase,
+    WaitingReplayPhase,
   },
   data() {
     return {
@@ -295,7 +306,7 @@ export default {
     showMuteButton() {
       return (
         this.playerName &&
-        ['PLAYING_MUSIC', 'GUESSING', 'REVEAL', 'WAITING'].includes(
+        ['PLAYING_MUSIC', 'WAITING_REPLAY', 'REVEAL', 'WAITING'].includes(
           this.gameState
         )
       );
@@ -396,6 +407,30 @@ export default {
     handlePlayAgain() {
       // Reset game or navigate back to lobby
     },
+    handleNextRound() {
+      this.socket.send(
+        JSON.stringify({
+          type: 'data',
+          action: { type: 'nextRound' },
+        })
+      );
+    },
+    handleReplay() {
+      this.socket.send(
+        JSON.stringify({
+          type: 'data',
+          action: { type: 'replay' },
+        })
+      );
+    },
+    handleContinue() {
+      this.socket.send(
+        JSON.stringify({
+          type: 'data',
+          action: { type: 'continue' },
+        })
+      );
+    },
     requestTracks() {
       this.socket.send(
         JSON.stringify({
@@ -483,7 +518,7 @@ export default {
 
       // If we enter a phase that needs tracks but have none, request them
       if (
-        ['PLAYING_MUSIC', 'GUESSING', 'REVEAL'].includes(newPhase) &&
+        ['PLAYING_MUSIC', 'WAITING_REPLAY', 'REVEAL'].includes(newPhase) &&
         (!this.tracks || this.tracks.length === 0)
       ) {
         this.requestTracks();
@@ -566,7 +601,9 @@ export default {
                 }
                 // If we landed in a phase that needs tracks but have none, request them
                 if (
-                  ['PLAYING_MUSIC', 'GUESSING', 'REVEAL'].includes(element) &&
+                  ['PLAYING_MUSIC', 'WAITING_REPLAY', 'REVEAL'].includes(
+                    element
+                  ) &&
                   (!this.tracks || this.tracks.length === 0)
                 ) {
                   this.requestTracks();
@@ -574,7 +611,21 @@ export default {
                 break;
               case 'phase': {
                 // Server confirmation of phase change — apply it.
-                // If the client already switched via countdown, this is a no-op.
+                // If the server sent a phase different from what the active countdown
+                // predicted (e.g. host skipped to REVEAL directly), cancel the
+                // stale countdown and all queued follow-ups before switching.
+                if (
+                  this.pendingPhase &&
+                  element.newPhase !== this.pendingPhase
+                ) {
+                  if (this.progressInterval) {
+                    clearInterval(this.progressInterval);
+                    this.progressInterval = null;
+                  }
+                  this.phaseEndTime = null;
+                  this.pendingPhase = null;
+                  this.queuedPhaseChange = null;
+                }
                 this.applyPhaseSwitch(element.newPhase);
                 break;
               }
@@ -687,6 +738,14 @@ export default {
   to {
     opacity: 1;
   }
+}
+
+.playing-guessing-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 40px;
+  padding-bottom: 40px;
 }
 
 /* Progress Bar */
